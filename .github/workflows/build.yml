@@ -1,0 +1,116 @@
+name: Build release packages
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'res/readme/**', '.github/legacy/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Prepare toolchains
+        run: ./tools/setup_ci.ps1
+      - name: Restore downloads and compiler cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            ../CaveStory-rs-runs/downloads
+            ../CaveStory-rs-runs/cache/cargo
+            ~/.cargo/registry
+            ~/.cargo/git/db
+          key: windows-2022-rust-1.98.1-${{ hashFiles('**/Cargo.lock', 'tools/requirements-font.txt', 'tools/setup_ci.ps1') }}-${{ github.sha }}
+          restore-keys: |
+            windows-2022-rust-1.98.1-${{ hashFiles('**/Cargo.lock', 'tools/requirements-font.txt', 'tools/setup_ci.ps1') }}-
+      - name: Set batch date
+        id: batch
+        run: |
+          $date = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, 'Taipei Standard Time').ToString('yyyyMMdd')
+          $batch = [IO.Path]::GetFullPath("$env:GITHUB_WORKSPACE/../CaveStory-rs-runs/builds/ci-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT")
+          New-Item -ItemType Directory -Force -Path $batch | Out-Null
+          @{build_date=$date; version=$date; configuration='Release'} | ConvertTo-Json | Set-Content -Encoding UTF8 "$batch/build-info.json"
+          "date=$date" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "directory=$batch" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+      - name: Prepare pinned game archives
+        run: |
+          New-Item -ItemType Directory -Force -Path '../CaveStory-rs-runs/maintenance' | Out-Null
+          py -3 -c "import sys; sys.path.insert(0, 'tools'); import build_chinese_font as font; import install_english_resources as resources; font.ensure_archive(resources.RUNS / 'downloads/fusion-pixel-font-12px-monospaced-bdf-v2026.09.01.zip')"
+          if ($LASTEXITCODE -ne 0) { throw 'Font preparation failed' }
+          py -3 tools/package_windows_with_game.py --android-assets '${{ steps.batch.outputs.directory }}/android/bundled-assets'
+          if ($LASTEXITCODE -ne 0) { throw 'Resource preparation failed' }
+      - name: Test resource and delivery tools
+        run: |
+          py -3 -m unittest discover -s tools/tests
+          if ($LASTEXITCODE -ne 0) { throw 'Resource tests failed' }
+          py -3 -m unittest discover -s tools -p test_local_delivery.py
+          if ($LASTEXITCODE -ne 0) { throw 'Delivery tests failed' }
+      - name: Build six Windows packages
+        run: ./tools/build_windows.ps1 -BatchDir '${{ steps.batch.outputs.directory }}' -BuildDate '${{ steps.batch.outputs.date }}'
+      - name: Upload Windows packages
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: CaveStory-rs_windows_${{ steps.batch.outputs.date }}
+          path: ${{ steps.batch.outputs.directory }}/windows/**/*.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Build four signed Android packages
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          REVIA_KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if (-not $env:ANDROID_KEYSTORE_BASE64 -or -not $env:REVIA_KS_PASS) {
+            throw 'Configure ANDROID_KEYSTORE_BASE64 and ANDROID_KEYSTORE_PASSWORD in repository Actions secrets.'
+          }
+          $env:REVIA_KS_PATH = Join-Path $env:RUNNER_TEMP 'cavestory-signing.jks'
+          try {
+            [IO.File]::WriteAllBytes($env:REVIA_KS_PATH, [Convert]::FromBase64String($env:ANDROID_KEYSTORE_BASE64))
+            Remove-Item Env:ANDROID_KEYSTORE_BASE64
+            ./tools/build_android.ps1 -BatchDir '${{ steps.batch.outputs.directory }}' -BuildDate '${{ steps.batch.outputs.date }}'
+            if ($LASTEXITCODE -ne 0) { throw 'Android build failed' }
+          } finally {
+            if (Test-Path -LiteralPath $env:REVIA_KS_PATH) { Remove-Item -LiteralPath $env:REVIA_KS_PATH -Force }
+            Remove-Item Env:REVIA_KS_PASS -ErrorAction SilentlyContinue
+          }
+      - name: Verify all ten packages and export download manifest
+        run: |
+          $batch = '${{ steps.batch.outputs.directory }}'
+          py -3 tools/verify_local_delivery.py $batch
+          if ($LASTEXITCODE -ne 0) { throw 'Full delivery verification failed' }
+          $export = Join-Path $batch 'delivery'
+          New-Item -ItemType Directory -Path $export | Out-Null
+          $records = @(Get-Content -Raw -Encoding UTF8 "$batch/verified-delivery.json" | ConvertFrom-Json)
+          $hashes = @()
+          foreach ($record in $records) {
+            $source = Join-Path $batch $record.path
+            $record.path = Split-Path $source -Leaf
+            Copy-Item -LiteralPath $source -Destination (Join-Path $export $record.path)
+            $hashes += "$($record.sha256)  $($record.path)"
+          }
+          $records | ConvertTo-Json -Depth 10 | Set-Content -Encoding UTF8 "$export/verified-delivery.json"
+          $hashes | Set-Content -Encoding ASCII "$export/SHA256SUMS"
+          "Verified 10 packages for ${{ steps.batch.outputs.date }} from commit $env:GITHUB_SHA." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+      - name: Upload verified delivery
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: CaveStory-rs_delivery_${{ steps.batch.outputs.date }}
+          path: ${{ steps.batch.outputs.directory }}/delivery/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14

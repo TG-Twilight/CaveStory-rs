@@ -9,10 +9,12 @@ $outputDir = Join-Path $BatchDir 'android'
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
 $env:CAVESTORY_RUNS = $runs
 $env:CARGO_TARGET_DIR = Join-Path $runs 'cache/cargo'
-$env:REVIA_KS_PASS = [Environment]::GetEnvironmentVariable('REVIA_KS_PASS', 'User')
-if ([string]::IsNullOrEmpty($env:REVIA_KS_PASS)) { throw 'Missing Windows user environment variable REVIA_KS_PASS' }
-$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
-$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+if ([string]::IsNullOrEmpty($env:REVIA_KS_PASS)) {
+    $env:REVIA_KS_PASS = [Environment]::GetEnvironmentVariable('REVIA_KS_PASS', 'User')
+}
+if ([string]::IsNullOrEmpty($env:REVIA_KS_PASS)) { throw 'Missing REVIA_KS_PASS in process or Windows user environment' }
+if (-not $env:JAVA_HOME) { $env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr' }
+if (-not $env:ANDROID_HOME) { $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk" }
 $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
 $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:JAVA_HOME\bin;$env:PATH"
 Push-Location "$PSScriptRoot/../platforms/android"

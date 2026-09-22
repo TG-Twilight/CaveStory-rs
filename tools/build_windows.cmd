@@ -1,6 +1,6 @@
 @echo off
 setlocal
-set "VSROOT=C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools"
+if not defined VSROOT set "VSROOT=C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools"
 set "TARGET=%~1"
 set "VSARCH=x64"
 if "%TARGET%"=="i686-pc-windows-msvc" set "VSARCH=x86"
@@ -8,7 +8,8 @@ call "%VSROOT%\Common7\Tools\VsDevCmd.bat" -arch=%VSARCH% -host_arch=x64
 if errorlevel 1 exit /b %errorlevel%
 set "PATH=%USERPROFILE%\.cargo\bin;%VSROOT%\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin;%PATH%"
 if "%TARGET%"=="aarch64-pc-windows-msvc" (
-    set "ARMTOOLS=%~dp0..\..\CaveStory-rs-runs\cache\toolchains\msvc-arm64\VC\Tools\MSVC\14.29.30133"
+    if defined CAVESTORY_ARMTOOLS set "ARMTOOLS=%CAVESTORY_ARMTOOLS%"
+    if not defined ARMTOOLS set "ARMTOOLS=%~dp0..\..\CaveStory-rs-runs\cache\toolchains\msvc-arm64\VC\Tools\MSVC\14.29.30133"
     set "CMAKE_GENERATOR=Ninja"
 )
 if defined ARMTOOLS (
