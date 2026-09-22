@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=CaveStory-rs
+Comment=A faithful and open-source remake of Cave Story's engine written in Rust
+Exec=CaveStory-rs
+Keywords=game;adventure;engine;action;platforms;
+Terminal=false
+Type=Application
+Icon=io.github.cavestory_rs
+Categories=Game;AdventureGame;ActionGame;

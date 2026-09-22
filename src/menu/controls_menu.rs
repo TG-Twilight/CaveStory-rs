@@ -5,7 +5,7 @@ use crate::framework::gamepad::{self, Axis, AxisDirection, Button, PlayerControl
 use crate::framework::keyboard::ScanCode;
 use crate::game::settings::{
     p1_default_keymap, p2_default_keymap, player_default_controller_button_map, ControllerType,
-    PlayerControllerButtonMap, PlayerKeyMap,
+    PlayerControllerButtonMap, PlayerKeyMap, RumbleMode,
 };
 use crate::game::shared_game_state::SharedGameState;
 use crate::input::combined_menu_controller::CombinedMenuController;
@@ -27,6 +27,84 @@ const FORBIDDEN_SCANCODES: [ScanCode; 12] = [
     ScanCode::F12,
 ];
 
+#[cfg(test)]
+mod automatic_rebind_tests {
+    use super::*;
+
+    #[test]
+    fn rumble_mode_menu_tick_stops_motor_after_disable() {
+        use std::sync::{Arc, Mutex};
+        struct RecordingPad(Arc<Mutex<Vec<(u16, u16, u32)>>>);
+        impl crate::framework::backend::BackendGamepad for RecordingPad {
+            fn instance_id(&self) -> u32 { 92 }
+            fn set_rumble(&mut self, low: u16, high: u16, ms: u32) -> GameResult {
+                self.0.lock().unwrap().push((low, high, ms));
+                Ok(())
+            }
+        }
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let mut ctx = Context::new();
+        ctx.headless = true;
+        ctx.filesystem.mount_vfs(Box::new(crate::data::builtin_fs::BuiltinFS::new()));
+        let mut state = SharedGameState::new(&mut ctx).unwrap();
+        state.settings.auto_controller_switching = true;
+        state.settings.player1_rumble = true;
+        ctx.gamepad_context.add_gamepad(Box::new(RecordingPad(calls.clone())), 0.3);
+        let mut menu = ControlsMenu::new();
+        menu.init(&mut state, &mut ctx).unwrap();
+        gamepad::set_rumble(&mut ctx, &state, 0, 1000, 2000, 50).unwrap();
+        state.settings.player1_rumble = false;
+        menu.tick(&mut || {}, &mut CombinedMenuController::new(), &mut state, &mut ctx).unwrap();
+        assert_eq!(*calls.lock().unwrap(), vec![(1000, 2000, 1000), (0, 0, 0)]);
+    }
+
+    #[test]
+    fn rumble_mode_menu_tracks_selected_player_and_hotplug() {
+        let mut ctx = Context::new();
+        ctx.headless = true;
+        ctx.filesystem.mount_vfs(Box::new(crate::data::builtin_fs::BuiltinFS::new()));
+        let mut state = SharedGameState::new(&mut ctx).unwrap();
+        state.settings.player2_controller_type = ControllerType::Gamepad(0);
+        state.settings.player2_rumble_mode = crate::game::settings::RumbleMode::Enhanced;
+        ctx.gamepad_context.add_gamepad(Box::new(Pad), 0.3);
+        let mut menu = ControlsMenu::new();
+        menu.selected_player = Player::Player2;
+        menu.init(&mut state, &mut ctx).unwrap();
+        let mode_index = |menu: &ControlsMenu| menu.main.entries.iter().find_map(|(_, entry)| {
+            if let MenuEntry::Options(label, index, _) = entry {
+                if label == state.loc.t("menus.controls_menu.rumble_mode") { return Some(*index); }
+            }
+            None
+        });
+        assert_eq!(mode_index(&menu), Some(1));
+        menu.selected_player = Player::Player1;
+        menu.update_controller_options(&state, &ctx);
+        assert_eq!(mode_index(&menu), None, "P1 must not use P2's device");
+        menu.selected_player = Player::Player2;
+        ctx.gamepad_context.remove_gamepad(91);
+        menu.update_controller_options(&state, &ctx);
+        assert_eq!(mode_index(&menu), None);
+    }
+    struct Pad;
+    impl crate::framework::backend::BackendGamepad for Pad {
+        fn instance_id(&self) -> u32 { 91 }
+        fn set_rumble(&mut self, _: u16, _: u16, _: u32) -> GameResult { Ok(()) }
+    }
+    #[test]
+    fn automatic_rebind_uses_effective_pad_not_saved_keyboard() {
+        let mut ctx = Context::new();
+        ctx.headless = true;
+        ctx.filesystem.mount_vfs(Box::new(crate::data::builtin_fs::BuiltinFS::new()));
+        let mut state = SharedGameState::new(&mut ctx).unwrap();
+        state.settings.player1_controller_type = ControllerType::Keyboard;
+        state.settings.auto_controller_switching = true;
+        ctx.gamepad_context.add_gamepad(Box::new(Pad), 0.3);
+        assert!(Player::Player1.controller_type(&state, &ctx) == ControllerType::Gamepad(0));
+        state.settings.auto_controller_switching = false;
+        assert!(Player::Player1.controller_type(&state, &ctx) == ControllerType::Keyboard);
+    }
+}
+
 #[derive(PartialEq, Eq, Clone, Debug)]
 #[repr(u8)]
 enum CurrentMenu {
@@ -41,9 +119,14 @@ enum CurrentMenu {
 enum MainMenuEntry {
     SelectedPlayer,
     Controller,
+    Layout,
     Rebind,
     Rumble,
+    RumbleMode,
+    #[cfg(all(target_os = "android", feature = "backend-sdl"))]
+    ShizukuRumble,
     DisplayTouchControls,
+    AutoHideTouchControls,
     Back,
 }
 
@@ -55,6 +138,7 @@ impl Default for MainMenuEntry {
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum SelectControllerMenuEntry {
+    Automatic,
     Keyboard,
     Gamepad(usize),
     Back,
@@ -99,8 +183,10 @@ enum Player {
 }
 
 impl Player {
-    fn controller_type(self, state: &SharedGameState) -> ControllerType {
+    fn controller_type(self, state: &SharedGameState, ctx: &Context) -> ControllerType {
         match self {
+            Player::Player1 if state.settings.auto_controller_switching => state.settings
+                .player1_gamepad_index(&ctx.gamepad_context).map_or(ControllerType::Keyboard, ControllerType::Gamepad),
             Player::Player1 => state.settings.player1_controller_type,
             Player::Player2 => state.settings.player2_controller_type,
         }
@@ -218,6 +304,15 @@ impl ControlsMenu {
         self.main
             .push_entry(MainMenuEntry::Rebind, MenuEntry::Active(state.loc.t("menus.controls_menu.rebind").to_owned()));
         self.main.push_entry(MainMenuEntry::Rumble, MenuEntry::Hidden);
+        self.main.push_entry(MainMenuEntry::RumbleMode, MenuEntry::Hidden);
+        #[cfg(all(target_os = "android", feature = "backend-sdl"))]
+        self.main.push_entry(MainMenuEntry::ShizukuRumble,
+            MenuEntry::Active(state.loc.t_optional("menus.controls_menu.rumble_output")
+                .unwrap_or(match state.loc.code.as_str() {
+                    "zh-Hans" => "振动输出方式", "zh-Hant" => "振動輸出方式",
+                    "jp" => "振動出力方式", _ => "Rumble output",
+                }).to_owned()));
+        self.main.push_entry(MainMenuEntry::Layout, MenuEntry::Hidden);
 
         if state.settings.touch_controls {
             self.main.push_entry(
@@ -227,6 +322,12 @@ impl ControlsMenu {
                     state.settings.display_touch_controls,
                 ),
             );
+            if cfg!(target_os = "android") {
+                self.main.push_entry(MainMenuEntry::AutoHideTouchControls, MenuEntry::Toggle(
+                    state.loc.t("menus.options_menu.controls_menu.auto_hide_touch_controls").to_owned(),
+                    state.settings.auto_hide_touch_controls,
+                ));
+            }
         }
         self.main.push_entry(MainMenuEntry::Back, MenuEntry::Active(state.loc.t("common.back").to_owned()));
 
@@ -346,7 +447,7 @@ impl ControlsMenu {
                     }
                 } else {
                     for (k, v) in self.player1_controller_button_map.iter() {
-                        let gamepad_sprite_offset = match state.settings.player1_controller_type {
+                        let gamepad_sprite_offset = match self.selected_player.controller_type(state, ctx) {
                             ControllerType::Keyboard => 1,
                             ControllerType::Gamepad(index) => {
                                 ctx.gamepad_context.get_gamepad_sprite_offset(index as usize)
@@ -357,7 +458,7 @@ impl ControlsMenu {
                             RebindMenuEntry::Control(*k),
                             MenuEntry::Control(
                                 k.to_string(state).to_owned(),
-                                ControlMenuData::Rect(v.get_rect(gamepad_sprite_offset, &state.constants)),
+                                Self::binding_display(*v, gamepad_sprite_offset, state),
                             ),
                         );
                     }
@@ -376,7 +477,7 @@ impl ControlsMenu {
                     }
                 } else {
                     for (k, v) in self.player2_controller_button_map.iter() {
-                        let gamepad_sprite_offset = match state.settings.player2_controller_type {
+                        let gamepad_sprite_offset = match self.selected_player.controller_type(state, ctx) {
                             ControllerType::Keyboard => 1,
                             ControllerType::Gamepad(index) => {
                                 ctx.gamepad_context.get_gamepad_sprite_offset(index as usize)
@@ -387,7 +488,7 @@ impl ControlsMenu {
                             RebindMenuEntry::Control(*k),
                             MenuEntry::Control(
                                 k.to_string(state).to_owned(),
-                                ControlMenuData::Rect(v.get_rect(gamepad_sprite_offset, &state.constants)),
+                                Self::binding_display(*v, gamepad_sprite_offset, state),
                             ),
                         );
                     }
@@ -402,8 +503,23 @@ impl ControlsMenu {
         self.rebind.push_entry(RebindMenuEntry::Back, MenuEntry::Active(state.loc.t("common.back").to_owned()));
     }
 
+    fn binding_display(binding: PlayerControllerInputType, offset: usize, state: &SharedGameState) -> ControlMenuData {
+        match binding {
+            PlayerControllerInputType::EitherButtons(first, second) => ControlMenuData::RectPair(
+                first.get_rect(offset, &state.constants), second.get_rect(offset, &state.constants)),
+            _ => ControlMenuData::Rect(binding.get_rect(offset, &state.constants)),
+        }
+    }
+
     fn update_controller_options(&mut self, state: &SharedGameState, ctx: &Context) {
         self.select_controller.entries.clear();
+
+        if self.selected_player == Player::Player1 {
+            self.select_controller.push_entry(
+                SelectControllerMenuEntry::Automatic,
+                MenuEntry::Active(state.loc.t("menus.controls_menu.controller.automatic").to_owned()),
+            );
+        }
 
         self.select_controller.push_entry(
             SelectControllerMenuEntry::Keyboard,
@@ -416,36 +532,31 @@ impl ControlsMenu {
             ).to_owned()),
         );
 
-        let gamepads = gamepad::get_gamepads(ctx);
+        let gamepads: Vec<_> = gamepad::get_gamepads(ctx).collect();
 
         let other_player_controller_type = match self.selected_player {
             Player::Player1 => state.settings.player2_controller_type,
+            Player::Player2 if state.settings.auto_controller_switching => ControllerType::Keyboard,
             Player::Player2 => state.settings.player1_controller_type,
         };
 
-        let mut available_gamepads = gamepads.len();
-
-        for i in 0..gamepads.len() {
+        for &(i, gamepad) in &gamepads {
             if let ControllerType::Gamepad(index) = other_player_controller_type {
                 if index as usize == i {
-                    available_gamepads -= 1;
                     continue;
                 }
             }
 
             self.select_controller.push_entry(
                 SelectControllerMenuEntry::Gamepad(i),
-                MenuEntry::Active(format!("{} {}", gamepads[i].get_gamepad_name(), i + 1)),
+                MenuEntry::Active(format!("{} {}", gamepad.get_gamepad_name(), i + 1)),
             );
         }
 
         self.select_controller
             .push_entry(SelectControllerMenuEntry::Back, MenuEntry::Active(state.loc.t("common.back").to_owned()));
 
-        let controller_type = match self.selected_player {
-            Player::Player1 => state.settings.player1_controller_type,
-            Player::Player2 => state.settings.player2_controller_type,
-        };
+        let controller_type = self.selected_player.controller_type(state, ctx);
 
         let rumble = match self.selected_player {
             Player::Player1 => state.settings.player1_rumble,
@@ -453,7 +564,7 @@ impl ControlsMenu {
         };
 
         if let ControllerType::Gamepad(index) = controller_type {
-            if index as usize >= available_gamepads {
+            if ctx.gamepad_context.instance_id(index).is_none() {
                 self.selected_controller = ControllerType::Keyboard;
                 self.main.set_entry(MainMenuEntry::Rumble, MenuEntry::Hidden);
             } else {
@@ -468,12 +579,72 @@ impl ControlsMenu {
             self.main.set_entry(MainMenuEntry::Rumble, MenuEntry::Hidden);
         }
 
+        let mode_entry = if matches!(self.selected_controller, ControllerType::Gamepad(_)) {
+            let mode = match self.selected_player {
+                Player::Player1 => state.settings.player1_rumble_mode,
+                Player::Player2 => state.settings.player2_rumble_mode,
+            };
+            MenuEntry::Options(
+                state.loc.t("menus.controls_menu.rumble_mode").to_owned(),
+                if mode == RumbleMode::Original { 0 } else { 1 },
+                vec![
+                    state.loc.t("menus.controls_menu.rumble_original").to_owned(),
+                    state.loc.t("menus.controls_menu.rumble_enhanced").to_owned(),
+                ],
+            )
+        } else {
+            MenuEntry::Hidden
+        };
+        self.main.set_entry(MainMenuEntry::RumbleMode, mode_entry);
+
         match self.selected_controller {
             ControllerType::Keyboard => self.select_controller.selected = SelectControllerMenuEntry::Keyboard,
             ControllerType::Gamepad(index) => {
                 self.select_controller.selected = SelectControllerMenuEntry::Gamepad(index as usize)
             }
         }
+        if self.selected_player == Player::Player1 && state.settings.auto_controller_switching {
+            self.select_controller.selected = SelectControllerMenuEntry::Automatic;
+        }
+    }
+
+    fn update_layout_options(&mut self, state: &SharedGameState) {
+        let (map, custom) = match self.selected_player {
+            Player::Player1 => (&state.settings.player1_controller_button_map, &state.settings.player1_custom_controller_button_map),
+            Player::Player2 => (&state.settings.player2_controller_button_map, &state.settings.player2_custom_controller_button_map),
+        };
+        let mut names = vec!["Xbox".to_owned(), "PSP".to_owned()];
+        if custom.is_some() || map.layout_index() == 2 {
+            names.push(state.loc.t("menus.controls_menu.custom_layout").to_owned());
+        }
+        self.main.set_entry(MainMenuEntry::Layout, MenuEntry::Options(
+            state.loc.t("menus.controls_menu.layout").to_owned(), map.layout_index(), names,
+        ));
+    }
+
+    fn rebuild_menu_controller(&mut self, state: &SharedGameState, controller: &mut CombinedMenuController) {
+        let mut new_controller = CombinedMenuController::new();
+        new_controller.add(state.settings.create_player1_controller());
+        new_controller.add(state.settings.create_player2_controller());
+        *controller = new_controller;
+        self.input_busy = true;
+        self.main.non_interactive = true;
+    }
+
+    fn switch_layout(&mut self, direction: isize, state: &mut SharedGameState, ctx: &Context,
+                     controller: &mut CombinedMenuController) -> GameResult {
+        let (map, custom) = match self.selected_player {
+            Player::Player1 => (&mut state.settings.player1_controller_button_map, &mut state.settings.player1_custom_controller_button_map),
+            Player::Player2 => (&mut state.settings.player2_controller_button_map, &mut state.settings.player2_custom_controller_button_map),
+        };
+        let count = if custom.is_some() || map.layout_index() == 2 { 3 } else { 2 };
+        let next = (map.layout_index() as isize + direction).rem_euclid(count) as usize;
+        map.switch_layout(next, custom);
+        self.player1_controller_button_map = self.init_controller_button_map(&state.settings.player1_controller_button_map);
+        self.player2_controller_button_map = self.init_controller_button_map(&state.settings.player2_controller_button_map);
+        self.update_rebind_menu(state, ctx);
+        self.rebuild_menu_controller(state, controller);
+        state.settings.save(ctx)
     }
 
     fn update_confirm_controls_menu(&mut self, state: &SharedGameState) {
@@ -902,10 +1073,31 @@ impl ControlsMenu {
         state: &mut SharedGameState,
         ctx: &mut Context,
     ) -> GameResult {
+        if self.current == CurrentMenu::MainMenu {
+            if cfg!(target_os = "android") && state.settings.touch_controls {
+                self.main.set_entry(MainMenuEntry::DisplayTouchControls,
+                    if state.touch_controls.visibility.has_external_devices() {
+                        MenuEntry::Toggle(state.loc.t("menus.options_menu.controls_menu.display_touch_controls").to_owned(),
+                            state.settings.display_touch_controls)
+                    } else {
+                        MenuEntry::Disabled(state.loc.t("menus.options_menu.controls_menu.touch_controls_required").to_owned())
+                    });
+            }
+            self.update_controller_options(state, ctx);
+            self.update_rebind_menu(state, ctx);
+        }
+        self.update_layout_options(state);
         self.update_sizes(state);
 
         match self.current {
             CurrentMenu::MainMenu => match self.main.tick(controller, state) {
+                MenuSelectionResult::Selected(MainMenuEntry::Layout, _)
+                | MenuSelectionResult::Right(MainMenuEntry::Layout, _, _) => {
+                    self.switch_layout(1, state, ctx, controller)?;
+                }
+                MenuSelectionResult::Left(MainMenuEntry::Layout, _, _) => {
+                    self.switch_layout(-1, state, ctx, controller)?;
+                }
                 MenuSelectionResult::Selected(MainMenuEntry::SelectedPlayer, toggle)
                 | MenuSelectionResult::Left(MainMenuEntry::SelectedPlayer, toggle, _)
                 | MenuSelectionResult::Right(MainMenuEntry::SelectedPlayer, toggle, _) => {
@@ -919,7 +1111,7 @@ impl ControlsMenu {
                         *value = new_value;
 
                         self.selected_player = new_player;
-                        self.selected_controller = new_player.controller_type(state);
+                        self.selected_controller = new_player.controller_type(state, ctx);
 
                         self.update_controller_options(state, ctx);
                         self.update_rebind_menu(state, ctx);
@@ -935,6 +1127,46 @@ impl ControlsMenu {
                 }
                 MenuSelectionResult::Selected(MainMenuEntry::Rebind, _) => {
                     self.current = CurrentMenu::RebindMenu;
+                }
+                #[cfg(all(target_os = "android", feature = "backend-sdl"))]
+                MenuSelectionResult::Selected(MainMenuEntry::ShizukuRumble, _) => {
+                    ctx.stop_rumble_for_lifecycle();
+                    let player = match self.selected_player { Player::Player1 => 0, Player::Player2 => 1 };
+                    let allowed = ctx.gamepad_context.rumble_indices(state)[player].is_some();
+                    let instance = match self.selected_player.controller_type(state, ctx) {
+                        ControllerType::Gamepad(index) => ctx.gamepad_context.instance_id(index),
+                        _ => None,
+                    };
+                    let map = match self.selected_player {
+                        Player::Player1 => &state.settings.player1_controller_button_map,
+                        Player::Player2 => &state.settings.player2_controller_button_map,
+                    };
+                    let android_key = |input: PlayerControllerInputType, fallback| match input {
+                        PlayerControllerInputType::ButtonInput(button)
+                        | PlayerControllerInputType::EitherButtons(button, _) => match button {
+                            Button::South => 96, Button::East => 97, Button::West => 99, Button::North => 100,
+                            Button::LeftShoulder => 102, Button::RightShoulder => 103,
+                            Button::LeftStick => 106, Button::RightStick => 107,
+                            Button::Start => 108, Button::Back => 109, _ => fallback,
+                        },
+                        _ => fallback,
+                    };
+                    crate::framework::android_rumble::show_settings(player as i32 + 1, instance, allowed,
+                        android_key(map.menu_ok, 96), android_key(map.menu_back, 97))?;
+                }
+                MenuSelectionResult::Selected(MainMenuEntry::RumbleMode, _)
+                | MenuSelectionResult::Left(MainMenuEntry::RumbleMode, _, _)
+                | MenuSelectionResult::Right(MainMenuEntry::RumbleMode, _, _) => {
+                    let mode = match self.selected_player {
+                        Player::Player1 => &mut state.settings.player1_rumble_mode,
+                        Player::Player2 => &mut state.settings.player2_rumble_mode,
+                    };
+                    *mode = match *mode {
+                        RumbleMode::Original => RumbleMode::Enhanced,
+                        RumbleMode::Enhanced => RumbleMode::Original,
+                    };
+                    state.settings.save(ctx)?;
+                    self.update_controller_options(state, ctx);
                 }
                 MenuSelectionResult::Selected(MainMenuEntry::Rumble, toggle) => {
                     if let MenuEntry::Toggle(_, value) = toggle {
@@ -988,12 +1220,29 @@ impl ControlsMenu {
                         *value = state.settings.display_touch_controls;
                     }
                 }
+                MenuSelectionResult::Selected(MainMenuEntry::AutoHideTouchControls, toggle) => {
+                    if let MenuEntry::Toggle(_, value) = toggle {
+                        state.settings.auto_hide_touch_controls = !state.settings.auto_hide_touch_controls;
+                        state.touch_controls.visibility.activity(std::time::Instant::now());
+                        state.settings.save(ctx)?;
+                        *value = state.settings.auto_hide_touch_controls;
+                    }
+                }
                 MenuSelectionResult::Selected(MainMenuEntry::Back, _) | MenuSelectionResult::Canceled => exit_action(),
                 _ => {}
             },
             CurrentMenu::SelectControllerMenu => match self.select_controller.tick(controller, state) {
+                MenuSelectionResult::Selected(SelectControllerMenuEntry::Automatic, _) => {
+                    state.settings.auto_controller_switching = true;
+                    state.settings.save(ctx)?;
+                    self.rebuild_menu_controller(state, controller);
+                    self.update_controller_options(state, ctx);
+                    self.update_rebind_menu(state, ctx);
+                    self.current = CurrentMenu::MainMenu;
+                }
                 MenuSelectionResult::Selected(SelectControllerMenuEntry::Keyboard, _) => {
                     if self.selected_player == Player::Player1 {
+                        state.settings.auto_controller_switching = false;
                         state.settings.player1_controller_type = ControllerType::Keyboard;
                     } else {
                         state.settings.player2_controller_type = ControllerType::Keyboard;
@@ -1015,6 +1264,7 @@ impl ControlsMenu {
                 }
                 MenuSelectionResult::Selected(SelectControllerMenuEntry::Gamepad(idx), _) => {
                     if self.selected_player == Player::Player1 {
+                        state.settings.auto_controller_switching = false;
                         state.settings.player1_controller_type = ControllerType::Gamepad(idx as u32);
                     } else {
                         state.settings.player2_controller_type = ControllerType::Gamepad(idx as u32);
@@ -1121,7 +1371,7 @@ impl ControlsMenu {
 
                                     let button = *pressed_gamepad_buttons.first().unwrap();
 
-                                    if self.selected_player.controller_type(state) != self.selected_controller {
+                                    if self.selected_player.controller_type(state, ctx) != self.selected_controller {
                                         state.sound_manager.play_sfx(12);
                                     } else {
                                         let normalized_input = self
@@ -1143,7 +1393,7 @@ impl ControlsMenu {
                                     self.input_busy = true;
                                     self.rebind.non_interactive = true;
 
-                                    if self.selected_player.controller_type(state) != self.selected_controller {
+                                    if self.selected_player.controller_type(state, ctx) != self.selected_controller {
                                         state.sound_manager.play_sfx(12);
                                     } else {
                                         let (axis, value) = *active_axes.first().unwrap();
@@ -1183,12 +1433,15 @@ impl ControlsMenu {
             },
         }
 
+        // Apply switch, mode and device assignment changes even while gameplay is paused.
+        ctx.gamepad_context.reconcile_rumble(state)?;
+
         if self.input_busy {
             let pressed_keys = ctx.keyboard_context.pressed_keys();
             let mut input_busy = pressed_keys.len() > 0;
 
             let gamepads = ctx.gamepad_context.get_gamepads();
-            for idx in 0..gamepads.len() {
+            for (idx, _) in gamepads {
                 let pressed_gamepad_buttons = ctx.gamepad_context.pressed_buttons(idx as u32);
                 let active_axes = ctx.gamepad_context.active_axes(idx as u32);
 

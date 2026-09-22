@@ -136,6 +136,8 @@ pub trait PhysicalEntity {
 
     fn direction(&self) -> Direction;
     fn is_player(&self) -> bool;
+    fn record_head_bump(&mut self) {}
+    fn record_landing(&mut self) {}
     fn ignore_tile_44(&self) -> bool {
         true
     }
@@ -213,6 +215,7 @@ pub trait PhysicalEntity {
 
                 if self.is_player() {
                     if !self.cond().hidden() && self.vel_y() < -0x200 {
+                        self.record_head_bump();
                         state.sound_manager.play_sfx(3);
                         state.create_caret(
                             self.x(),
@@ -246,6 +249,7 @@ pub trait PhysicalEntity {
 
                 if self.is_player() {
                     if self.vel_y() > 0x400 {
+                        self.record_landing();
                         state.sound_manager.play_sfx(23);
                     }
 
@@ -276,6 +280,7 @@ pub trait PhysicalEntity {
 
             if self.is_player() {
                 if self.vel_y() > 0x400 {
+                    self.record_landing();
                     state.sound_manager.play_sfx(23);
                 }
 
@@ -310,6 +315,7 @@ pub trait PhysicalEntity {
             );
 
             if self.is_player() && !self.cond().hidden() && self.vel_y() < -0x200 {
+                self.record_head_bump();
                 state.sound_manager.play_sfx(3);
                 state.create_caret(
                     self.x(),
@@ -354,6 +360,7 @@ pub trait PhysicalEntity {
             );
 
             if self.is_player() && !self.cond().hidden() && self.vel_y() < -0x200 {
+                self.record_head_bump();
                 state.sound_manager.play_sfx(3);
                 state.create_caret(
                     self.x(),
@@ -398,6 +405,7 @@ pub trait PhysicalEntity {
             );
 
             if self.is_player() && !self.cond().hidden() && self.vel_y() < -0x200 {
+                self.record_head_bump();
                 state.sound_manager.play_sfx(3);
                 state.create_caret(
                     self.x(),
@@ -442,6 +450,7 @@ pub trait PhysicalEntity {
             );
 
             if self.is_player() && !self.cond().hidden() && self.vel_y() < -0x200 {
+                self.record_head_bump();
                 state.sound_manager.play_sfx(3);
                 state.create_caret(
                     self.x(),
@@ -490,6 +499,7 @@ pub trait PhysicalEntity {
             );
 
             if self.is_player() && self.vel_y() > 0x400 {
+                self.record_landing();
                 state.sound_manager.play_sfx(23);
             }
 
@@ -525,6 +535,7 @@ pub trait PhysicalEntity {
             );
 
             if self.is_player() && self.vel_y() > 0x400 {
+                self.record_landing();
                 state.sound_manager.play_sfx(23);
             }
 
@@ -560,6 +571,7 @@ pub trait PhysicalEntity {
             );
 
             if self.is_player() && self.vel_y() > 0x400 {
+                self.record_landing();
                 state.sound_manager.play_sfx(23);
             }
 
@@ -597,6 +609,7 @@ pub trait PhysicalEntity {
             );
 
             if self.is_player() && self.vel_y() > 0x400 {
+                self.record_landing();
                 state.sound_manager.play_sfx(23);
             }
 
@@ -625,6 +638,7 @@ pub trait PhysicalEntity {
             self.set_y((y * tile_size) - (self.x() - x * tile_size) + self.hit_bounds().top as i32);
 
             if self.is_player() && !self.cond().hidden() && self.vel_y() < -0x200 {
+                self.record_head_bump();
                 state.sound_manager.play_sfx(3);
                 state.create_caret(
                     self.x(),
@@ -664,6 +678,7 @@ pub trait PhysicalEntity {
             self.set_y((y * tile_size) + (self.x() - x * tile_size) + self.hit_bounds().top as i32);
 
             if self.is_player() && !self.cond().hidden() && self.vel_y() < -0x200 {
+                self.record_head_bump();
                 state.sound_manager.play_sfx(3);
                 state.create_caret(
                     self.x(),
@@ -709,6 +724,7 @@ pub trait PhysicalEntity {
             );
 
             if self.is_player() && self.vel_y() > 0x400 {
+                self.record_landing();
                 state.sound_manager.play_sfx(23);
             }
 
@@ -743,6 +759,7 @@ pub trait PhysicalEntity {
             );
 
             if self.is_player() && self.vel_y() > 0x400 {
+                self.record_landing();
                 state.sound_manager.play_sfx(23);
             }
 

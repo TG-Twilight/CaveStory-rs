@@ -10,6 +10,7 @@ use crate::framework::keyboard::KeyboardContext;
 use crate::game::Game;
 
 pub struct Context {
+    pub(crate) prompt_history: crate::input::prompts::PromptHistory,
     pub headless: bool,
     pub window: WindowParams,
     pub(crate) filesystem: Filesystem,
@@ -25,6 +26,7 @@ pub struct Context {
 impl Context {
     pub fn new() -> Context {
         Context {
+            prompt_history: Default::default(),
             headless: false,
             window: WindowParams::default(),
             filesystem: Filesystem::new(),
@@ -35,6 +37,13 @@ impl Context {
             screen_size: (320.0, 240.0),
             screen_insets: (0.0, 0.0, 0.0, 0.0),
             vsync_mode: VSyncMode::Uncapped,
+        }
+    }
+
+    /// Event-loop callbacks cannot return errors; preserve a backend failure in the log.
+    pub(crate) fn stop_rumble_for_lifecycle(&mut self) {
+        if let Err(err) = self.gamepad_context.stop_rumble() {
+            log::warn!("Failed to stop controller rumble during lifecycle change: {}", err);
         }
     }
 

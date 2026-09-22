@@ -1,0 +1,23 @@
+<resources>
+    <string name="shizuku_title">振動の出力方式</string>
+    <string name="shizuku_description">項目を選ぶと振動を試せます。項目の決定操作や「振動テスト」でも、画面を閉じずに試せます。「OK」で保存します。Bluetooth にはアクセスを許可した Shell モードの Shizuku または Sui が必要です。USB はシステム出力を使用します。プレイヤーごとの振動設定も適用されます。</string>
+    <string name="shizuku_off">無効</string>
+    <string name="shizuku_enable">有効化してアクセスを許可</string>
+    <string name="shizuku_disable">無効にする</string>
+    <string name="shizuku_retry">アクセス許可 / 再接続</string>
+    <string name="shizuku_permission">アクセス許可が必要です。今後表示しない設定で拒否した場合は、Shizuku または Sui で許可してください。</string>
+    <string name="shizuku_shell_required">Shell 権限が必要です。ADB で Shizuku を再起動するか、Sui で Shell を選択してください。</string>
+    <string name="shizuku_ready">Shell サービスの準備ができました。対応コントローラーを接続すると振動を利用できます。</string>
+    <string name="shizuku_connecting">Shell サービスに接続中…</string>
+    <string name="shizuku_device_unsupported">この入力機器に対応する Bluetooth コントローラーを特定できませんでした。</string>
+    <string name="shizuku_failed">このシステムは必要な Bluetooth 出力に対応していません。コントローラーの入力は引き続き使えます。</string>
+    <string name="shizuku_unavailable">サービスを利用できません。Shizuku または Sui を Shell モードで起動して再接続してください。</string>
+    <string name="rumble_output_system">システム出力</string>
+    <string name="rumble_output_bluetooth">Bluetooth 出力（setReport）</string>
+    <string name="rumble_output_player">振動の出力方式 — プレイヤー %1$d</string>
+    <string name="rumble_output_no_device">このプレイヤーに割り当てたコントローラーを接続してください。</string>
+    <string name="rumble_output_disabled">振動を有効にして、使用中のプレイヤーにコントローラーを割り当ててください。</string>
+    <string name="rumble_output_sent">要求を送信しました。コントローラーが振動したか確認してください。</string>
+    <string name="rumble_output_not_sent">要求は送信されませんでした。機器とアクセス許可を確認して「振動テスト」を押してください。</string>
+    <string name="rumble_output_test">振動テスト</string>
+</resources>

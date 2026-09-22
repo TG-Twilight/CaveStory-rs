@@ -32,6 +32,8 @@ bitfield! {
 #[derive(Clone)]
 pub struct GamepadController {
     gamepad_id: u32,
+    selected_instance: Option<u32>,
+    last_input_sequence: u64,
     target: TargetPlayer,
     state: KeyState,
     old_state: KeyState,
@@ -42,6 +44,7 @@ pub struct GamepadController {
 
 #[derive(Clone)]
 pub struct RumbleState {
+    pub target_instance: Option<u32>,
     pub low_freq: u16,
     pub hi_freq: u16,
     pub ticks: u32,
@@ -51,6 +54,8 @@ impl GamepadController {
     pub fn new(gamepad_id: u32, target: TargetPlayer) -> GamepadController {
         GamepadController {
             gamepad_id,
+            selected_instance: None,
+            last_input_sequence: 0,
             target,
             state: KeyState(0),
             old_state: KeyState(0),
@@ -67,6 +72,35 @@ impl GamepadController {
 
 impl PlayerController for GamepadController {
     fn update(&mut self, state: &mut SharedGameState, ctx: &mut Context) -> GameResult {
+        if let Some(rumble) = self.rumble_state.take() {
+            if let Some(index) = rumble.target_instance.and_then(|id| ctx.gamepad_context.index_for_instance(id)) {
+                gamepad::set_rumble(ctx, state, index, rumble.low_freq, rumble.hi_freq, rumble.ticks)?;
+            }
+        }
+        let index = match self.target {
+            TargetPlayer::Player1 => state.settings.player1_gamepad_index(&ctx.gamepad_context),
+            TargetPlayer::Player2 => ctx.gamepad_context.instance_id(self.gamepad_id).map(|_| self.gamepad_id),
+        };
+        let instance = index.and_then(|index| ctx.gamepad_context.instance_id(index));
+        let switched = self.selected_instance != instance;
+        let fresh_input = index.is_some_and(|index| ctx.gamepad_context.last_input(index) > self.last_input_sequence);
+        self.selected_instance = instance;
+        self.last_input_sequence = ctx.gamepad_context.input_sequence();
+        self.rumble_enabled = match self.target {
+            TargetPlayer::Player1 => state.settings.player1_rumble,
+            TargetPlayer::Player2 => state.settings.player2_rumble,
+        };
+        let Some(index) = index else {
+            self.state = KeyState(0);
+            self.old_state = KeyState(0);
+            self.trigger = KeyState(0);
+            return Ok(());
+        };
+        self.gamepad_id = index;
+        if switched {
+            self.old_state = KeyState(0);
+            self.trigger = KeyState(0);
+        }
         let button_map = match self.target {
             TargetPlayer::Player1 => &state.settings.player1_controller_button_map,
             TargetPlayer::Player2 => &state.settings.player2_controller_button_map,
@@ -92,16 +126,10 @@ impl PlayerController for GamepadController {
         self.state.set_menu_ok(gamepad::is_active(ctx, self.gamepad_id, &button_map.menu_ok));
         self.state.set_menu_back(gamepad::is_active(ctx, self.gamepad_id, &button_map.menu_back));
 
-        if let Some(rumble_data) = &self.rumble_state {
-            gamepad::set_rumble(
-                ctx,
-                state,
-                self.gamepad_id,
-                rumble_data.low_freq,
-                rumble_data.hi_freq,
-                rumble_data.ticks,
-            )?;
-            self.rumble_state = None;
+        if switched && !fresh_input {
+            // A disconnect fallback must not turn an already-held button on
+            // another pad into a new confirm/jump edge.
+            self.old_state = self.state;
         }
 
         Ok(())
@@ -271,6 +299,6 @@ impl PlayerController for GamepadController {
             return;
         }
 
-        self.rumble_state = Some(RumbleState { low_freq, hi_freq, ticks });
+        self.rumble_state = Some(RumbleState { target_instance: self.selected_instance, low_freq, hi_freq, ticks });
     }
 }

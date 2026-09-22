@@ -21,7 +21,8 @@ impl TextScript {
                 if let Some(op) = op_maybe {
                     match op {
                         // Zero operand codes
-                        TSCOpCode::AEp
+                        TSCOpCode::GHP
+                        | TSCOpCode::AEp
                         | TSCOpCode::CAT
                         | TSCOpCode::CIL
                         | TSCOpCode::CLO

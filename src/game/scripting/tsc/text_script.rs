@@ -1,4 +1,7 @@
 use std::cell::RefCell;
+
+#[cfg(test)]
+mod tests;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::io;
@@ -35,6 +38,11 @@ use crate::input::touch_controls::TouchControlType;
 use crate::scene::game_scene::GameScene;
 
 const TSC_SUBSTITUTION_MAP_SIZE: usize = 1;
+
+// Shared with TextBoxes so measurement and drawing use the same content area.
+pub(crate) const TEXT_BOX_WIDTH: f32 = 244.0;
+pub(crate) const TEXT_BOX_PADDING: f32 = 14.0;
+pub(crate) const TEXT_BOX_FACE_OFFSET: f32 = 56.0;
 
 bitfield! {
     pub struct TextScriptFlags(u16);
@@ -246,6 +254,7 @@ pub struct TextScriptVM {
     pub scripts: Rc<RefCell<Scripts>>,
     pub state: TextScriptExecutionState,
     pub stack: Vec<TextScriptExecutionState>,
+    confirmed_project_position: Option<(u16, u32)>,
     pub flags: TextScriptFlags,
     pub mode: ScriptMode,
     /// The player who triggered the event.
@@ -327,6 +336,7 @@ impl TextScriptVM {
             })),
             state: TextScriptExecutionState::Ended,
             stack: Vec::with_capacity(6),
+            confirmed_project_position: None,
             flags: TextScriptFlags(0),
             mode: ScriptMode::Map,
             executor_player: TargetPlayer::Player1,
@@ -390,6 +400,7 @@ impl TextScriptVM {
 
     pub fn reset(&mut self) {
         self.state = TextScriptExecutionState::Ended;
+        self.confirmed_project_position = None;
         self.flags.0 = 0;
         self.current_illustration = None;
         self.illustration_state = IllustrationState::Hidden;
@@ -490,6 +501,32 @@ impl TextScriptVM {
                             texture: "",
                         }));
 
+                        if chr != '\r' && chr != '\n' {
+                            let vm = &state.textscript_vm;
+                            let line = match vm.current_line {
+                                TextScriptLine::Line1 => &vm.line_1,
+                                TextScriptLine::Line2 => &vm.line_2,
+                                TextScriptLine::Line3 => &vm.line_3,
+                            };
+                            let max_width = TEXT_BOX_WIDTH - 2.0 * TEXT_BOX_PADDING
+                                - if vm.face == 0 { 0.0 } else { TEXT_BOX_FACE_OFFSET };
+                            let next_width = builder.compute_width_iter(line.iter().copied().chain(std::iter::once(chr)));
+                            // Delay the wrap until a printable character actually overflows. This
+                            // preserves exact-fit lines followed by CRLF or a wait command.
+                            if !line.is_empty() && next_width > max_width {
+                                match vm.current_line {
+                                    TextScriptLine::Line1 => state.textscript_vm.current_line = TextScriptLine::Line2,
+                                    TextScriptLine::Line2 => state.textscript_vm.current_line = TextScriptLine::Line3,
+                                    TextScriptLine::Line3 => {
+                                        // Retry this character after scrolling; it has not been consumed.
+                                        state.textscript_vm.state =
+                                            TextScriptExecutionState::MsgNewLine(event, ip, remaining, 0, 4);
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+
                         match chr {
                             '\n' if state.textscript_vm.current_line == TextScriptLine::Line1 => {
                                 state.textscript_vm.current_line = TextScriptLine::Line2;
@@ -505,28 +542,16 @@ impl TextScriptVM {
                                 state.textscript_vm.prev_char = chr;
                                 state.textscript_vm.line_1.push(chr);
 
-                                let text_len = builder.compute_width_iter(state.textscript_vm.line_1.iter().copied());
-                                if text_len >= 284.0 {
-                                    state.textscript_vm.current_line = TextScriptLine::Line2;
-                                }
                             }
                             _ if state.textscript_vm.current_line == TextScriptLine::Line2 => {
                                 state.textscript_vm.prev_char = chr;
                                 state.textscript_vm.line_2.push(chr);
 
-                                let text_len = builder.compute_width_iter(state.textscript_vm.line_2.iter().copied());
-                                if text_len >= 284.0 {
-                                    state.textscript_vm.current_line = TextScriptLine::Line3;
-                                }
                             }
                             _ if state.textscript_vm.current_line == TextScriptLine::Line3 => {
                                 state.textscript_vm.prev_char = chr;
                                 state.textscript_vm.line_3.push(chr);
 
-                                let text_len = builder.compute_width_iter(state.textscript_vm.line_3.iter().copied());
-                                if text_len >= 284.0 {
-                                    new_line = true;
-                                }
                             }
                             _ => {}
                         }
@@ -577,7 +602,7 @@ impl TextScriptVM {
                                 TextScriptExecutionState::MsgNewLine(
                                     event,
                                     cursor.position() as u32,
-                                    remaining,
+                                    0,
                                     ticks,
                                     4,
                                 )
@@ -600,7 +625,7 @@ impl TextScriptVM {
                         state.textscript_vm.line_1.clear();
                         state.textscript_vm.line_1.append(&mut state.textscript_vm.line_2);
                         state.textscript_vm.line_2.append(&mut state.textscript_vm.line_3);
-                        state.textscript_vm.state = if remaining < 2 {
+                        state.textscript_vm.state = if remaining == 0 {
                             TextScriptExecutionState::Running(event, ip)
                         } else {
                             TextScriptExecutionState::Msg(event, ip, remaining, ticks)
@@ -685,9 +710,11 @@ impl TextScriptVM {
                         state.sound_manager.play_sfx(18);
                         match selection {
                             ConfirmSelection::Yes => {
+                                state.textscript_vm.confirmed_project_position = Some((event, ip));
                                 state.textscript_vm.state = TextScriptExecutionState::Running(event, ip);
                             }
                             ConfirmSelection::No => {
+                                state.textscript_vm.confirmed_project_position = None;
                                 state.textscript_vm.clear_text_box();
                                 state.textscript_vm.state = TextScriptExecutionState::Running(no_event, 0);
                             }
@@ -794,6 +821,7 @@ impl TextScriptVM {
             return Ok(TextScriptExecutionState::Ended);
         };
 
+        let project_confirmed = state.textscript_vm.confirmed_project_position.take() == Some((event, ip));
         match op {
             TSCOpCode::_NOP => {
                 exec_state = TextScriptExecutionState::Running(event, cursor.position() as u32);
@@ -1270,6 +1298,16 @@ impl TextScriptVM {
                     ConfirmSelection::Yes,
                 );
             }
+            TSCOpCode::GHP => {
+                // Skipping dialogue or playing a replay must never launch an external app.
+                if project_confirmed && !ctx.headless && !state.textscript_vm.flags.cutscene_skip()
+                    && !matches!(state.replay_state, ReplayState::Playback(_)) {
+                    if let Err(error) = crate::util::browser::open(crate::util::browser::PROJECT_URL) {
+                        log::warn!("Cannot open project page: {}", error);
+                    }
+                }
+                exec_state = TextScriptExecutionState::Running(event, cursor.position() as u32);
+            }
             TSCOpCode::UNJ => {
                 let mode = read_cur_varint(&mut cursor)?;
                 let event_num = read_cur_varint(&mut cursor)? as u16;
@@ -1352,6 +1390,8 @@ impl TextScriptVM {
                 state.textscript_vm.line_2.clear();
                 state.textscript_vm.line_3.clear();
                 state.textscript_vm.suspend = true;
+                #[cfg(trainer_interface)]
+                game_scene.transfer_trainer_to(&mut new_scene, state);
                 state.next_scene = Some(Box::new(new_scene));
 
                 log::info!("Transitioning to stage {}, with script #{:04}", map_id, event_num);

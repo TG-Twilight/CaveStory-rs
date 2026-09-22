@@ -1,4 +1,8 @@
 use std::collections::{HashMap, HashSet};
+use std::time::Instant;
+use crate::game::rumble::{RumbleEffect, RumblePlayback};
+use crate::game::settings::{ControllerType, RumbleMode};
+use crate::game::shared_game_state::PlayerCount;
 
 use serde::{Deserialize, Serialize};
 
@@ -143,6 +147,7 @@ impl Button {
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum PlayerControllerInputType {
     ButtonInput(Button),
+    EitherButtons(Button, Button),
     AxisInput(Axis, AxisDirection),
     Either(Button, Axis, AxisDirection),
 }
@@ -151,6 +156,7 @@ impl PlayerControllerInputType {
     pub fn get_rect(&self, offset: usize, constants: &EngineConstants) -> Rect<u16> {
         match self {
             PlayerControllerInputType::ButtonInput(button) => button.get_rect(offset, constants),
+            PlayerControllerInputType::EitherButtons(button, _) => button.get_rect(offset, constants),
             PlayerControllerInputType::AxisInput(axis, _) => axis.get_rect(offset, constants),
             PlayerControllerInputType::Either(button, axis, _) => button.get_rect(offset, constants),
         }
@@ -158,6 +164,8 @@ impl PlayerControllerInputType {
 }
 
 pub struct GamepadData {
+    rumble: RumblePlayback,
+    last_input: u64,
     controller: Box<dyn BackendGamepad>,
     controller_type: GamepadType,
 
@@ -177,6 +185,8 @@ pub struct GamepadData {
 impl GamepadData {
     pub(crate) fn new(game_controller: Box<dyn BackendGamepad>, axis_sensitivity: f64) -> Self {
         GamepadData {
+            rumble: RumblePlayback::default(),
+            last_input: 0,
             controller: game_controller,
             controller_type: GamepadType::Unknown,
 
@@ -215,42 +225,93 @@ impl GamepadData {
     }
 
     pub fn set_rumble(&mut self, state: &SharedGameState, low_freq: u16, hi_freq: u16, ticks: u32) -> GameResult {
-        let duration_ms = (ticks as f32 / state.settings.timing_mode.get_tps() as f32 * 1000.0) as u32;
-        self.controller.set_rumble(low_freq, hi_freq, duration_ms)
+        self.play_effect(RumbleEffect::original(low_freq, hi_freq, ticks, state.settings.timing_mode.get_tps() as u32))
+    }
+
+    fn play_effect(&mut self, effect: RumbleEffect) -> GameResult {
+        if self.rumble.accept(effect, Instant::now()) {
+            self.controller.set_rumble(effect.low, effect.high, effect.duration_ms)?;
+        }
+        Ok(())
+    }
+
+    fn stop_rumble(&mut self) -> GameResult {
+        if self.rumble.stop() { self.controller.set_rumble(0, 0, 0)?; }
+        Ok(())
     }
 }
 
 pub struct GamepadContext {
-    gamepads: Vec<GamepadData>,
+    // Stable session slots keep another player's assignment intact on unplug.
+    gamepads: Vec<Option<GamepadData>>,
+    input_sequence: u64,
 }
 
 impl GamepadContext {
     pub(crate) fn new() -> Self {
-        Self { gamepads: Vec::new() }
+        Self { gamepads: Vec::new(), input_sequence: 0 }
+    }
+
+    pub(crate) fn automatic_gamepad_index(&self, excluded: Option<u32>) -> Option<u32> {
+        self.get_gamepads()
+            .filter(|(index, _)| Some(*index as u32) != excluded)
+            .max_by_key(|(index, pad)| (pad.last_input, std::cmp::Reverse(*index)))
+            .map(|(index, _)| index as u32)
+    }
+
+    pub(crate) fn instance_id(&self, index: u32) -> Option<u32> {
+        self.get_gamepad_by_index(index as usize).map(|pad| pad.controller.instance_id())
+    }
+
+    pub(crate) fn index_for_instance(&self, id: u32) -> Option<u32> {
+        self.get_gamepads().find(|(_, pad)| pad.controller.instance_id() == id).map(|(i, _)| i as u32)
+    }
+
+    pub(crate) fn input_sequence(&self) -> u64 { self.input_sequence }
+
+    pub(crate) fn last_input(&self, index: u32) -> u64 {
+        self.get_gamepad_by_index(index as usize).map_or(0, |pad| pad.last_input)
+    }
+
+    pub(crate) fn set_axis_sensitivity(&mut self, index: u32, sensitivity: f64) {
+        if let Some(pad) = self.get_gamepad_by_index_mut(index as usize) {
+            pad.axis_sensitivity = sensitivity;
+        }
     }
 
     fn get_gamepad(&self, gamepad_id: u32) -> Option<&GamepadData> {
-        self.gamepads.iter().find(|gamepad| gamepad.controller.instance_id() == gamepad_id)
+        self.gamepads.iter().flatten().find(|gamepad| gamepad.controller.instance_id() == gamepad_id)
     }
 
     fn get_gamepad_by_index(&self, gamepad_index: usize) -> Option<&GamepadData> {
-        self.gamepads.get(gamepad_index)
+        self.gamepads.get(gamepad_index).and_then(Option::as_ref)
     }
 
     fn get_gamepad_mut(&mut self, gamepad_id: u32) -> Option<&mut GamepadData> {
-        self.gamepads.iter_mut().find(|gamepad| gamepad.controller.instance_id() == gamepad_id)
+        self.gamepads.iter_mut().flatten().find(|gamepad| gamepad.controller.instance_id() == gamepad_id)
     }
 
     fn get_gamepad_by_index_mut(&mut self, gamepad_index: usize) -> Option<&mut GamepadData> {
-        self.gamepads.get_mut(gamepad_index)
+        self.gamepads.get_mut(gamepad_index).and_then(Option::as_mut)
     }
 
     pub(crate) fn add_gamepad(&mut self, game_controller: Box<dyn BackendGamepad>, axis_sensitivity: f64) {
-        self.gamepads.push(GamepadData::new(game_controller, axis_sensitivity));
+        if self.get_gamepad(game_controller.instance_id()).is_some() { return; }
+        let data = Some(GamepadData::new(game_controller, axis_sensitivity));
+        if let Some(slot) = self.gamepads.iter_mut().find(|slot| slot.is_none()) {
+            *slot = data;
+        } else {
+            self.gamepads.push(data);
+        }
     }
 
     pub(crate) fn remove_gamepad(&mut self, gamepad_id: u32) {
-        self.gamepads.retain(|data| data.controller.instance_id() != gamepad_id);
+        for slot in &mut self.gamepads {
+            if slot.as_ref().is_some_and(|data| data.controller.instance_id() == gamepad_id) {
+                if let Some(pad) = slot.as_mut() { let _ = pad.stop_rumble(); }
+                *slot = None;
+            }
+        }
     }
 
     pub(crate) fn set_gamepad_type(&mut self, gamepad_id: u32, controller_type: GamepadType) {
@@ -268,7 +329,12 @@ impl GamepadContext {
     }
 
     pub(crate) fn set_button(&mut self, gamepad_id: u32, button: Button, pressed: bool) {
+        let activated = pressed && self.get_gamepad(gamepad_id)
+            .is_some_and(|pad| !pad.pressed_buttons_set.contains(&button));
+        if activated { self.input_sequence += 1; }
+        let sequence = self.input_sequence;
         if let Some(gamepad) = self.get_gamepad_mut(gamepad_id) {
+            if activated { gamepad.last_input = sequence; }
             if pressed {
                 gamepad.pressed_buttons_set.insert(button);
             } else {
@@ -278,7 +344,15 @@ impl GamepadContext {
     }
 
     pub(crate) fn set_axis_value(&mut self, gamepad_id: u32, axis: Axis, value: f64) {
+        let activated = self.get_gamepad(gamepad_id).is_some_and(|pad| {
+            let previous = pad.axis_values.get(&axis).copied().unwrap_or(0.0);
+            let threshold = pad.axis_sensitivity.max(0.12);
+            value.abs() > threshold && (previous.abs() <= threshold || previous.signum() != value.signum())
+        });
+        if activated { self.input_sequence += 1; }
+        let sequence = self.input_sequence;
         if let Some(gamepad) = self.get_gamepad_mut(gamepad_id) {
+            if activated { gamepad.last_input = sequence; }
             gamepad.axis_values.insert(axis, value);
         }
     }
@@ -286,6 +360,9 @@ impl GamepadContext {
     pub(crate) fn is_active(&self, gamepad_index: u32, input_type: &PlayerControllerInputType) -> bool {
         match input_type {
             PlayerControllerInputType::ButtonInput(button) => self.is_button_active(gamepad_index, *button),
+            PlayerControllerInputType::EitherButtons(first, second) => {
+                self.is_button_active(gamepad_index, *first) || self.is_button_active(gamepad_index, *second)
+            }
             PlayerControllerInputType::AxisInput(axis, axis_direction) => {
                 self.is_axis_active(gamepad_index, *axis, *axis_direction)
             }
@@ -338,8 +415,8 @@ impl GamepadContext {
         }
     }
 
-    pub(crate) fn get_gamepads(&self) -> &Vec<GamepadData> {
-        &self.gamepads
+    pub(crate) fn get_gamepads(&self) -> impl Iterator<Item = (usize, &GamepadData)> {
+        self.gamepads.iter().enumerate().filter_map(|(index, pad)| pad.as_ref().map(|pad| (index, pad)))
     }
 
     pub(crate) fn pressed_buttons(&self, gamepad_index: u32) -> HashSet<Button> {
@@ -382,10 +459,49 @@ impl GamepadContext {
         hi_freq: u16,
         ticks: u32,
     ) -> GameResult {
-        for gamepad in self.gamepads.iter_mut() {
-            gamepad.set_rumble(state, low_freq, hi_freq, ticks)?;
+        let indices = self.rumble_indices(state);
+        for index in indices.into_iter().flatten() {
+            self.set_rumble(index, state, low_freq, hi_freq, ticks)?;
         }
 
+        Ok(())
+    }
+
+    pub(crate) fn rumble_indices(&self, state: &SharedGameState) -> [Option<u32>; 2] {
+        let p1 = if state.settings.player1_rumble { state.settings.player1_gamepad_index(self) } else { None };
+        let p2 = if state.player_count == PlayerCount::Two && state.settings.player2_rumble {
+            match state.settings.player2_controller_type {
+                ControllerType::Gamepad(index) if self.instance_id(index).is_some() && Some(index) != p1 => Some(index),
+                _ => None,
+            }
+        } else { None };
+        [p1, p2]
+    }
+
+    /// Stop feedback immediately on mode/off/assignment changes. Menus use this too.
+    pub(crate) fn reconcile_rumble(&mut self, state: &SharedGameState) -> GameResult {
+        let indices = self.rumble_indices(state);
+        for (index, pad) in self.gamepads.iter_mut().enumerate() {
+            if let Some(pad) = pad {
+                let owner = indices.iter().position(|slot| *slot == Some(index as u32));
+                let enhanced = match owner {
+                    Some(0) => state.settings.player1_rumble_mode == RumbleMode::Enhanced,
+                    Some(1) => state.settings.player2_rumble_mode == RumbleMode::Enhanced,
+                    _ => false,
+                };
+                if owner.is_none() || (!enhanced && pad.rumble.enhanced_active()) { pad.stop_rumble()?; }
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn play_effect(&mut self, index: u32, effect: RumbleEffect) -> GameResult {
+        if let Some(pad) = self.get_gamepad_by_index_mut(index as usize) { pad.play_effect(effect)?; }
+        Ok(())
+    }
+
+    pub(crate) fn stop_rumble(&mut self) -> GameResult {
+        for pad in self.gamepads.iter_mut().flatten() { pad.stop_rumble()?; }
         Ok(())
     }
 }
@@ -393,6 +509,134 @@ impl GamepadContext {
 impl Default for GamepadContext {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod controller_mapping_tests {
+    use super::*;
+
+    struct TestGamepad(u32);
+    impl BackendGamepad for TestGamepad {
+        fn instance_id(&self) -> u32 { self.0 }
+        fn set_rumble(&mut self, _: u16, _: u16, _: u32) -> GameResult { Ok(()) }
+    }
+
+    #[test]
+    fn quake_respects_player_switches_and_does_not_rumble_unassigned_devices() {
+        use std::sync::{Arc, Mutex};
+        struct RecordingPad(u32, Arc<Mutex<Vec<u32>>>);
+        impl BackendGamepad for RecordingPad {
+            fn instance_id(&self) -> u32 { self.0 }
+            fn set_rumble(&mut self, low: u16, high: u16, _: u32) -> GameResult {
+                if low != 0 || high != 0 { self.1.lock().unwrap().push(self.0); }
+                Ok(())
+            }
+        }
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let mut ctx = Context::new();
+        ctx.headless = true;
+        ctx.filesystem.mount_vfs(Box::new(crate::data::builtin_fs::BuiltinFS::new()));
+        let mut state = SharedGameState::new(&mut ctx).unwrap();
+        for id in [10, 20, 30] {
+            ctx.gamepad_context.add_gamepad(Box::new(RecordingPad(id, calls.clone())), 0.3);
+        }
+        state.settings.auto_controller_switching = true;
+        state.settings.player1_rumble = false;
+        state.settings.player2_rumble = true;
+        state.settings.player2_controller_type = crate::game::settings::ControllerType::Gamepad(1);
+        state.player_count = crate::game::shared_game_state::PlayerCount::One;
+        set_quake_rumble_all(&mut ctx, &state, 10).unwrap();
+        assert!(calls.lock().unwrap().is_empty(), "off must suppress story quake too");
+        state.player_count = crate::game::shared_game_state::PlayerCount::Two;
+        set_quake_rumble_all(&mut ctx, &state, 10).unwrap();
+        assert_eq!(*calls.lock().unwrap(), vec![20]);
+    }
+
+    #[test]
+    fn either_map_button_works_and_releases_across_reconnect() {
+        let binding: PlayerControllerInputType =
+            serde_json::from_str(r#"{"EitherButtons":["North","Back"]}"#).unwrap();
+        let mut pads = GamepadContext::new();
+        assert!(!pads.is_active(0, &binding));
+        pads.add_gamepad(Box::new(TestGamepad(7)), 0.3);
+        for button in [Button::North, Button::Back] {
+            pads.set_button(7, button, true);
+            assert!(pads.is_active(0, &binding));
+            assert!(!pads.is_active(1, &binding));
+            pads.set_button(7, button, false);
+            assert!(!pads.is_active(0, &binding));
+        }
+        pads.set_button(7, Button::North, true);
+        pads.set_button(7, Button::Back, true);
+        pads.set_button(7, Button::North, false);
+        assert!(pads.is_active(0, &binding));
+        pads.remove_gamepad(7);
+        pads.add_gamepad(Box::new(TestGamepad(9)), 0.3);
+        assert!(!pads.is_active(0, &binding));
+        assert_eq!(binding, serde_json::from_str(&serde_json::to_string(&binding).unwrap()).unwrap());
+    }
+
+    #[test]
+    fn legacy_single_button_binding_still_round_trips() {
+        let binding: PlayerControllerInputType = serde_json::from_str(r#"{"ButtonInput":"North"}"#).unwrap();
+        assert_eq!(serde_json::to_string(&binding).unwrap(), r#"{"ButtonInput":"North"}"#);
+    }
+
+    #[test]
+    fn auto_selects_real_activity_but_not_release_or_axis_drift() {
+        let mut pads = GamepadContext::new();
+        assert_eq!(pads.automatic_gamepad_index(None), None);
+        pads.add_gamepad(Box::new(TestGamepad(41)), 0.3);
+        pads.add_gamepad(Box::new(TestGamepad(73)), 0.3);
+        assert_eq!(pads.automatic_gamepad_index(None), Some(0));
+        pads.set_axis_value(73, Axis::LeftX, 0.2);
+        assert_eq!(pads.automatic_gamepad_index(None), Some(0));
+        pads.set_button(73, Button::South, true);
+        assert_eq!(pads.automatic_gamepad_index(None), Some(1));
+        assert_eq!(pads.automatic_gamepad_index(Some(1)), Some(0));
+        pads.set_button(41, Button::North, false);
+        assert_eq!(pads.automatic_gamepad_index(None), Some(1));
+        pads.set_axis_value(41, Axis::LeftX, 0.8);
+        assert_eq!(pads.automatic_gamepad_index(None), Some(0));
+        pads.set_button(73, Button::North, true);
+        pads.set_axis_value(41, Axis::LeftX, 0.9);
+        assert_eq!(pads.automatic_gamepad_index(None), Some(1));
+        pads.remove_gamepad(73);
+        assert_eq!(pads.automatic_gamepad_index(None), Some(0));
+        assert_eq!(pads.automatic_gamepad_index(Some(0)), None);
+    }
+
+    #[test]
+    fn disconnect_keeps_other_players_slot_and_reuses_vacancy() {
+        let mut pads = GamepadContext::new();
+        pads.add_gamepad(Box::new(TestGamepad(41)), 0.3);
+        pads.add_gamepad(Box::new(TestGamepad(73)), 0.3);
+        pads.set_button(73, Button::South, true);
+        pads.remove_gamepad(41);
+        assert!(pads.is_button_active(1, Button::South));
+        assert!(!pads.is_button_active(0, Button::South));
+        pads.add_gamepad(Box::new(TestGamepad(90)), 0.3);
+        pads.set_button(90, Button::North, true);
+        assert!(pads.is_button_active(0, Button::North));
+        assert!(!pads.is_button_active(1, Button::North));
+    }
+
+    #[test]
+    fn sensitivity_updates_follow_reused_slots_not_instance_ids() {
+        let mut pads = GamepadContext::new();
+        pads.add_gamepad(Box::new(TestGamepad(41)), 0.3);
+        pads.add_gamepad(Box::new(TestGamepad(73)), 0.3);
+        pads.set_button(73, Button::South, true);
+        pads.remove_gamepad(41);
+        pads.add_gamepad(Box::new(TestGamepad(90)), 0.3);
+        let slot = pads.index_for_instance(90).unwrap();
+        assert_eq!(slot, 0);
+        pads.set_axis_sensitivity(slot, 0.6);
+        pads.set_axis_value(90, Axis::LeftX, 0.4);
+        assert_eq!(pads.automatic_gamepad_index(None), Some(1));
+        pads.set_axis_value(90, Axis::LeftX, 0.8);
+        assert_eq!(pads.automatic_gamepad_index(None), Some(0));
     }
 }
 
@@ -424,7 +668,7 @@ pub fn is_axis_active(ctx: &Context, gamepad_index: u32, axis: Axis, direction: 
     ctx.gamepad_context.is_axis_active(gamepad_index, axis, direction)
 }
 
-pub fn get_gamepads(ctx: &Context) -> &Vec<GamepadData> {
+pub fn get_gamepads(ctx: &Context) -> impl Iterator<Item = (usize, &GamepadData)> {
     ctx.gamepad_context.get_gamepads()
 }
 

@@ -466,6 +466,8 @@ pub struct EngineConstants {
     pub string_table: HashMap<String, String>,
     pub missile_flags: Vec<u16>,
     pub base_locale: String,
+    pub unavailable_english_pack: bool,
+    pub unavailable_japanese_pack: bool,
     pub locales: Vec<Locale>,
     pub gamepad: GamepadConsts,
     pub stage_encoding: Option<TextScriptEncoding>,
@@ -1776,6 +1778,8 @@ impl EngineConstants {
             string_table: HashMap::new(),
             missile_flags: vec![200, 201, 202, 218, 550, 766, 880, 920, 1551],
             base_locale: "en".to_owned(),
+            unavailable_english_pack: false,
+            unavailable_japanese_pack: false,
             locales: Vec::new(),
             gamepad: {
                 let mut holder = GamepadConsts {
@@ -2018,7 +2022,11 @@ impl EngineConstants {
             }
         }
 
-        if self.active_root.support_locales && settings.locale != self.base_locale {
+        // Freeware installations can have translated base data. An explicit
+        // language directory takes precedence even for the default menu locale.
+        if self.active_root.support_locales
+            && !(base == "/" && ((settings.locale == "en" && self.unavailable_english_pack)
+                || (settings.locale == "jp" && self.unavailable_japanese_pack))) {
             self.base_paths.insert(0, format!("{base}{}/", settings.locale));
         }
 
@@ -2085,6 +2093,17 @@ impl EngineConstants {
 
     pub fn load_locales(&mut self, ctx: &mut Context) -> GameResult {
         self.locales.clear();
+        self.unavailable_english_pack = filesystem::exists(ctx, "/en/english-install.json")
+            && (!filesystem::exists(ctx, "/en/stage.sect") || !filesystem::exists(ctx, "/en/locale/en.json"));
+        if self.unavailable_english_pack {
+            self.base_paths.retain(|path| path != "/en/");
+        }
+        self.unavailable_japanese_pack = filesystem::exists(ctx, "/jp/japanese-install.json")
+            && (!filesystem::exists(ctx, "/jp/stage.sect") || !filesystem::exists(ctx, "/jp/locale/jp.json"));
+        if self.unavailable_japanese_pack {
+            self.base_paths.retain(|path| path != "/jp/");
+        }
+        let mut loaded_codes = std::collections::HashSet::new();
 
         let locale_files = filesystem::read_dir_find(ctx, &self.base_paths, "locale/");
 
@@ -2098,6 +2117,12 @@ impl EngineConstants {
                 let mut parts = filename.split('.');
                 parts.next().unwrap().to_string()
             };
+
+            // Directory enumeration includes each mounted layer. Locale::new
+            // already resolves the highest-priority file; list each code once.
+            if !loaded_codes.insert(locale_code.clone()) {
+                continue;
+            }
 
             let mut locale = Locale::new(ctx, &self.base_paths, &locale_code);
 
@@ -2123,6 +2148,12 @@ impl EngineConstants {
 
             if locale_code == "jp" && filesystem::exists(ctx, "/base/credit_jp.tsc") {
                 locale.set_font(FontData::new("csfontjp.fnt".to_owned(), 0.5, 0.0));
+            }
+
+            if ((locale_code == "en" && self.unavailable_english_pack)
+                || (locale_code == "jp" && self.unavailable_japanese_pack)) && self.active_root.base_path() == "/" {
+                locale.is_present = false;
+                locale.is_complete = false;
             }
 
             self.locales.push(locale.clone());

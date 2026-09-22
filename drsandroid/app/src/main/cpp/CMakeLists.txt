@@ -6,6 +6,34 @@ cmake_minimum_required(VERSION 3.22)
 
 add_subdirectory(SDL2)
 
+# The pinned SDL2 predates GameSir's Xbox 360 USB vendor registration.
+# Generate the one corrected translation unit in the build tree, keeping the
+# submodule pristine. Fail explicitly if an SDL update changes the patch site.
+set(sdl_hidapi_source "${CMAKE_CURRENT_SOURCE_DIR}/SDL2/src/joystick/hidapi/SDL_hidapijoystick.c")
+file(READ "${sdl_hidapi_source}" sdl_hidapi_content)
+set(gamesir_patch_before "            0x9886, /* ASTRO Gaming */")
+set(gamesir_patch_after "            0x9886, /* ASTRO Gaming */\n            0x3537, /* GameSir: Nova Lite wired XInput */")
+string(FIND "${sdl_hidapi_content}" "${gamesir_patch_before}" gamesir_patch_offset)
+if(gamesir_patch_offset EQUAL -1)
+  message(FATAL_ERROR "Pinned SDL Xbox 360 vendor patch no longer applies; review GameSir support")
+endif()
+string(REPLACE "${gamesir_patch_before}" "${gamesir_patch_after}" sdl_hidapi_content "${sdl_hidapi_content}")
+set(sdl_hidapi_generated "${CMAKE_CURRENT_BINARY_DIR}/sdl-overrides/SDL_hidapijoystick.c")
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/sdl-overrides")
+file(CONFIGURE OUTPUT "${sdl_hidapi_generated}" CONTENT "${sdl_hidapi_content}" @ONLY)
+get_target_property(sdl_sources SDL2 SOURCES)
+list(FIND sdl_sources "${sdl_hidapi_source}" sdl_hidapi_index)
+if(sdl_hidapi_index EQUAL -1)
+  message(FATAL_ERROR "Cannot replace pinned SDL HIDAPI translation unit")
+endif()
+list(REMOVE_AT sdl_sources ${sdl_hidapi_index})
+set_property(TARGET SDL2 PROPERTY SOURCES "${sdl_sources}")
+target_sources(SDL2 PRIVATE "${sdl_hidapi_generated}")
+set_source_files_properties("${sdl_hidapi_generated}" TARGET_DIRECTORY SDL2 PROPERTIES
+  INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/SDL2/src/joystick/hidapi")
+
+include(shizuku-rumble.cmake)
+
 include(FetchContent)
 FetchContent_Declare(
         Corrosion

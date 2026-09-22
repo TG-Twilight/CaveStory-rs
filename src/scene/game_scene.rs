@@ -1,3 +1,57 @@
+#[cfg(all(test, windows))]
+mod trainer_transfer_regression {
+    use super::*;
+    use crate::game::map::Map;
+    use crate::game::stage::{Background, NpcType, StageData, Tileset};
+
+    #[test]
+    fn handed_off_scene_does_not_poll_again_before_backend_swap() {
+        let previous = std::env::var_os("CAVESTORY_TRAINER");
+        struct Restore(Option<std::ffi::OsString>);
+        impl Drop for Restore {
+            fn drop(&mut self) {
+                if let Some(value) = &self.0 { std::env::set_var("CAVESTORY_TRAINER", value); }
+                else { std::env::remove_var("CAVESTORY_TRAINER"); }
+            }
+        }
+        let _restore = Restore(previous);
+        std::env::set_var("CAVESTORY_TRAINER", "1");
+        let mut ctx = Context::new();
+        ctx.headless = true;
+        ctx.filesystem.mount_vfs(Box::new(crate::data::builtin_fs::BuiltinFS::new()));
+        let mut state = SharedGameState::new(&mut ctx).unwrap();
+        state.settings.original_textures = true;
+        state.control_flags.set_control_enabled(true);
+        let data = StageData { name: "test".into(), name_jp: "test".into(), map: "test".into(),
+            boss_no: 0, tileset: Tileset::new("0"), pxpack_data: None,
+            background: Background::new("0"), background_type: BackgroundType::Black,
+            background_color: Color::from_rgb(0, 0, 0), npc1: NpcType::new("0"), npc2: NpcType::new("0") };
+        let stage = Stage { data, map: Map { width: 1, height: 1, tiles: vec![0],
+            attrib: [0; 256], tile_size: TileSize::Tile16x16 } };
+        let mut old = GameScene::from_stage(&mut state, &mut ctx, stage.clone(), 0).unwrap();
+        old.player1.cond.set_alive(true);
+        old.player1.life = 3;
+        assert!(old.poll_trainer(&state, false));
+        old.player1.trainer_effects.jump_percent = 175;
+        let mut next = GameScene::from_stage(&mut state, &mut ctx, stage, 1).unwrap();
+        next.player1 = old.player1.clone();
+        old.transfer_trainer_to(&mut next, &state);
+        assert!(old.trainer.is_none());
+        assert!(next.trainer.is_some());
+        assert!(!next.trainer_reset_pending);
+        state.next_scene = Some(Box::new(TitleScene::new())); // backend swap still pending
+        assert!(!old.poll_trainer(&state, false));
+        assert!(old.trainer.is_none());
+        state.next_scene = None;
+        assert!(next.poll_trainer(&state, false));
+        assert_eq!(next.player1.trainer_effects.jump_percent, 175);
+        std::env::remove_var("CAVESTORY_TRAINER"); // revoke during/after handoff
+        next.poll_trainer(&state, false);
+        assert_eq!(next.player1.trainer_effects.jump_percent, 100);
+        assert!(next.trainer.is_none());
+    }
+}
+
 use std::cell::RefCell;
 use std::ops::{ControlFlow, Deref, Range};
 use std::rc::Rc;
@@ -41,7 +95,6 @@ use crate::game::physics::{PhysicalEntity, OFFSETS};
 use crate::game::player::{ControlMode, Player, TargetPlayer};
 use crate::game::scripting::tsc::credit_script::CreditScriptVM;
 use crate::game::scripting::tsc::text_script::{ScriptMode, TextScriptExecutionState, TextScriptVM};
-use crate::game::settings::ControllerType;
 use crate::game::shared_game_state::{CutsceneSkipMode, PlayerCount, ReplayState, SharedGameState, TileSize};
 use crate::game::stage::{BackgroundType, Stage, StageTexturePaths};
 use crate::game::weapon::bullet::BulletManager;
@@ -55,6 +108,10 @@ use crate::scene::Scene;
 use crate::util::rng::RNG;
 
 pub struct GameScene {
+    #[cfg(trainer_interface)]
+    trainer: Option<crate::trainer::Adapter>,
+    #[cfg(trainer_interface)]
+    trainer_reset_pending: bool,
     pub tick: u32,
     pub stage: Stage,
     pub water_params: WaterParams,
@@ -105,6 +162,49 @@ const P2_OFFSCREEN_TEXT: &'static str = "P2";
 const CUTSCENE_SKIP_WAIT: u16 = 50;
 
 impl GameScene {
+    /// Only ordinary scripted map transfers continue the current Trainer session.
+    /// New games, save loads and title transitions keep the default reset path.
+    #[cfg(trainer_interface)]
+    pub(crate) fn transfer_trainer_to(&mut self, next: &mut Self, state: &SharedGameState) {
+        if self.intro_mode || state.replay_state != ReplayState::None
+            || !self.player1.cond.alive() || self.player1.life == 0 {
+            return;
+        }
+        if let Some(mut trainer) = self.trainer.take() {
+            trainer.transfer_context();
+            next.trainer = Some(trainer);
+            next.trainer_reset_pending = false;
+            next.player1.trainer_jump_active = false;
+            next.player2.trainer_jump_active = false;
+        }
+    }
+
+    #[cfg(trainer_interface)]
+    pub(crate) fn poll_trainer(&mut self, state: &SharedGameState, suspended: bool) -> bool {
+        // A backend may run another tick before swapping next_scene. The old
+        // scene must not recreate an endpoint after handing it to the successor.
+        if state.next_scene.is_some() {
+            return false;
+        }
+        if self.trainer_reset_pending {
+            crate::trainer::clear_player_effects(&mut self.player1, &mut self.inventory_player1);
+            crate::trainer::clear_player_effects(&mut self.player2, &mut self.inventory_player2);
+            self.trainer_reset_pending = false;
+        }
+        if self.trainer.is_none() {
+            self.trainer = crate::trainer::Adapter::new();
+        }
+        if let Some(mut trainer) = self.trainer.take() {
+            // Tick once after revocation so cleanup still borrows the real players.
+            if trainer.tick(self, state, suspended) {
+                self.trainer = Some(trainer);
+            }
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn new(state: &mut SharedGameState, ctx: &mut Context, id: usize) -> GameResult<Self> {
         info!("Loading stage {} ({})", id, &state.stages[id].map);
         let stage = Stage::load(&state.constants.base_paths, &state.stages[id], ctx)?;
@@ -150,6 +250,10 @@ impl GameScene {
         let (npc_list, npc_token) = NPCList::new();
 
         Ok(Self {
+            #[cfg(trainer_interface)]
+            trainer: crate::trainer::Adapter::new(),
+            #[cfg(trainer_interface)]
+            trainer_reset_pending: true,
             tick: 0,
             stage,
             water_params,
@@ -298,9 +402,73 @@ impl GameScene {
     }
 
     fn draw_carets(&self, state: &mut SharedGameState, ctx: &mut Context) -> GameResult {
-        let batch = state.texture_set.get_or_load_batch(ctx, &state.constants, "Caret")?;
+        let mut batch = state.texture_set.get_or_load_batch(ctx, &state.constants, "Caret")?;
 
         for caret in state.carets.iter() {
+            // Replace only optional lettering; tick still controls motion, animation and lifetime.
+            let first_frame = |rects: &[Rect<u16>]| {
+                rects.first().is_some_and(|rect| {
+                    (rect.left, rect.top, rect.right, rect.bottom)
+                        == (caret.anim_rect.left, caret.anim_rect.top, caret.anim_rect.right, caret.anim_rect.bottom)
+                })
+            };
+            let label = match (caret.ctype, caret.direction) {
+                (CaretType::LevelUp, Direction::Left) => Some((
+                    "game.caret.level_up",
+                    if first_frame(&state.constants.caret.level_up_rects) {
+                        (255, 255, 255, 255)
+                    } else {
+                        (0, 0, 128, 255)
+                    },
+                )),
+                (CaretType::LevelUp, Direction::Right) => Some((
+                    "game.caret.level_down",
+                    if first_frame(&state.constants.caret.level_down_rects) {
+                        (255, 0, 0, 255)
+                    } else {
+                        (128, 0, 0, 255)
+                    },
+                )),
+                (CaretType::EmptyText, _) => Some((
+                    "game.caret.empty",
+                    if first_frame(&state.constants.caret.empty_text) {
+                        (255, 255, 0, 255)
+                    } else {
+                        (255, 0, 0, 255)
+                    },
+                )),
+                _ => None,
+            };
+            let label = label.and_then(|(key, color)| {
+                state.loc.t_optional(key).filter(|text| !text.trim().is_empty()).map(|text| (text, color))
+            });
+            if let Some((text, color)) = label {
+                // A newly spawned caret has no frame until its first tick, just like the sprite path.
+                if caret.anim_rect.width() == 0 || caret.anim_rect.height() == 0 {
+                    continue;
+                }
+                // Flush here to preserve layering with other particles, then resume the sprite batch.
+                batch.draw(ctx)?;
+                state.font.builder()
+                    .position(
+                        interpolate_fix9_scale(
+                            caret.prev_x - caret.offset_x - self.frame.prev_x,
+                            caret.x - caret.offset_x - self.frame.x,
+                            state.frame_time,
+                        ),
+                        interpolate_fix9_scale(
+                            caret.prev_y - caret.offset_y - self.frame.prev_y,
+                            caret.y - caret.offset_y - self.frame.y,
+                            state.frame_time,
+                        ) + (caret.anim_rect.height() as f32 - state.font.line_height()) / 2.0,
+                    )
+                    .center(caret.anim_rect.width() as f32)
+                    .color(color)
+                    .shadow(true)
+                    .draw(text, ctx, &state.constants, &mut state.texture_set)?;
+                batch = state.texture_set.get_or_load_batch(ctx, &state.constants, "Caret")?;
+                continue;
+            }
             batch.add_rect(
                 interpolate_fix9_scale(
                     caret.prev_x - caret.offset_x - self.frame.prev_x,
@@ -1166,12 +1334,15 @@ impl GameScene {
                     continue;
                 }
 
+                let hit_damage = bullet.damage;
+                #[cfg(trainer_interface)]
+                let hit_damage = crate::trainer::bullet_damage(hit_damage, bullet.trainer_weapon, bullet.owner, &self.player1.trainer_effects, &self.player2.trainer_effects);
                 if npc.npc_flags.shootable() {
-                    npc.life = (npc.life as i32).saturating_sub(bullet.damage as i32).clamp(0, u16::MAX as i32) as u16;
+                    npc.life = (npc.life as i32).saturating_sub(hit_damage as i32).clamp(0, u16::MAX as i32) as u16;
 
                     if npc.life == 0 {
                         if npc.npc_flags.show_damage() {
-                            npc.popup.add_value(-bullet.damage);
+                            npc.popup.add_value(-hit_damage);
                         }
 
                         if self.player1.cond.alive() && npc.npc_flags.event_when_killed() {
@@ -1200,7 +1371,7 @@ impl GameScene {
                         }
 
                         if npc.npc_flags.show_damage() {
-                            npc.popup.add_value(-bullet.damage);
+                            npc.popup.add_value(-hit_damage);
                         }
                     }
                 } else if !bullet.weapon_flags.no_proj_dissipation()
@@ -1267,6 +1438,9 @@ impl GameScene {
                     continue;
                 }
 
+                let hit_damage = bullet.damage;
+                #[cfg(trainer_interface)]
+                let hit_damage = crate::trainer::bullet_damage(hit_damage, bullet.trainer_weapon, bullet.owner, &self.player1.trainer_effects, &self.player2.trainer_effects);
                 if npc.npc_flags.shootable() {
                     let shock = npc.shock;
                     if npc.cond.damage_boss() {
@@ -1274,7 +1448,7 @@ impl GameScene {
                         npc = unsafe { self.boss.parts.get_unchecked_mut(0) };
                     }
 
-                    npc.life = (npc.life as i32).saturating_sub(bullet.damage as i32).clamp(0, u16::MAX as i32) as u16;
+                    npc.life = (npc.life as i32).saturating_sub(hit_damage as i32).clamp(0, u16::MAX as i32) as u16;
 
                     if npc.life == 0 {
                         npc.life = npc.id;
@@ -1308,7 +1482,7 @@ impl GameScene {
 
                         npc.shock = 8;
                         if npc.npc_flags.show_damage() {
-                            npc.popup.add_value(-bullet.damage);
+                            npc.popup.add_value(-hit_damage);
                         }
 
                         npc = unsafe { self.boss.parts.get_unchecked_mut(i) };
@@ -1332,6 +1506,14 @@ impl GameScene {
     }
 
     fn tick_world(&mut self, state: &mut SharedGameState) -> GameResult {
+        for (player, mode) in [(&mut self.player1, state.settings.player1_rumble_mode),
+            (&mut self.player2, state.settings.player2_rumble_mode)] {
+            player.feedback.begin_tick(
+                mode == crate::game::settings::RumbleMode::Enhanced && state.control_flags.control_enabled()
+                    && player.cond.alive() && !player.cond.hidden() && !state.settings.noclip,
+                player.y, player.flags.hit_bottom_wall(), state.settings.timing_mode.get_tps() as u32,
+            );
+        }
         self.nikumaru.tick(state, &self.player1)?;
         self.background.tick()?;
         self.hud_player1.visible = self.player1.cond.alive();
@@ -1470,6 +1652,11 @@ impl GameScene {
         }
 
         self.bullet_manager.tick_bullets(state, [&self.player1, &self.player2], &self.npc_list);
+        for &(x, y, super_missile) in &self.bullet_manager.explosions {
+            for player in [&mut self.player1, &mut self.player2] {
+                player.feedback.explosion(x.saturating_sub(player.x), y.saturating_sub(player.y), super_missile);
+            }
+        }
         state.tick_carets();
 
         match self.frame.update_target {
@@ -1658,6 +1845,11 @@ impl GameScene {
 
 impl Scene for GameScene {
     fn init(&mut self, state: &mut SharedGameState, ctx: &mut Context) -> GameResult {
+        ctx.gamepad_context.stop_rumble()?;
+        self.player1.feedback.clear();
+        self.player2.feedback.clear();
+        state.quake_rumble_counter = 0;
+        state.super_quake_rumble_counter = 0;
         if state.mod_path.is_some() && state.replay_state == ReplayState::Recording {
             self.replay.initialize_recording(state);
         }
@@ -1769,6 +1961,9 @@ impl Scene for GameScene {
     }
 
     fn tick(&mut self, state: &mut SharedGameState, ctx: &mut Context) -> GameResult {
+        #[cfg(trainer_interface)]
+        self.poll_trainer(state, false);
+        ctx.gamepad_context.reconcile_rumble(state)?;
         if !self.pause_menu.is_paused() {
             if let ReplayState::Playback(_) = state.replay_state {
                 self.replay.tick(state, (ctx, &mut self.player1))?;
@@ -1817,6 +2012,11 @@ impl Scene for GameScene {
         }
 
         if self.pause_menu.is_paused() {
+            ctx.gamepad_context.stop_rumble()?;
+            self.player1.feedback.clear();
+            self.player2.feedback.clear();
+            state.quake_rumble_counter = 0;
+            state.super_quake_rumble_counter = 0;
             self.pause_menu.tick(state, ctx)?;
             return Ok(());
         }
@@ -1916,6 +2116,15 @@ impl Scene for GameScene {
             }
         }
 
+        if state.next_scene.is_some() {
+            ctx.gamepad_context.stop_rumble()?;
+            self.player1.feedback.clear();
+            self.player2.feedback.clear();
+            state.quake_rumble_counter = 0;
+            state.super_quake_rumble_counter = 0;
+            return Ok(());
+        }
+
         if state.quake_rumble_counter > 0 {
             gamepad::set_quake_rumble_all(ctx, state, state.quake_rumble_counter)?;
             state.quake_rumble_counter = 0;
@@ -1924,6 +2133,13 @@ impl Scene for GameScene {
         if state.super_quake_rumble_counter > 0 {
             gamepad::set_super_quake_rumble_all(ctx, state, state.super_quake_rumble_counter)?;
             state.super_quake_rumble_counter = 0;
+        }
+
+        let indices = ctx.gamepad_context.rumble_indices(state);
+        for (player, index) in [&mut self.player1, &mut self.player2].into_iter().zip(indices) {
+            if let (Some(effect), Some(index)) = (player.feedback.take(), index) {
+                ctx.gamepad_context.play_effect(index, effect)?;
+            }
         }
 
         Ok(())
@@ -2201,33 +2417,10 @@ impl Scene for GameScene {
         if (self.skip_counter > 1 || state.tutorial_counter > 0)
             && (state.settings.cutscene_skip_mode != CutsceneSkipMode::Auto)
         {
-            let key = {
-                if state.settings.touch_controls {
-                    ">>".to_owned()
-                } else {
-                    match state.settings.player1_controller_type {
-                        ControllerType::Keyboard => format!("{:?}", state.settings.player1_key_map.skip),
-                        ControllerType::Gamepad(_) => "=".to_owned(),
-                    }
-                }
-            };
+            let prompt = crate::input::prompts::skip_prompt(ctx, &state.settings, &state.constants);
+            let text = state.tt("game.cutscene_skip", &[("key", prompt.key.as_str())]);
+            let symbols = Symbols { symbols: &prompt.symbols, texture: "buttons" };
 
-            let text = state.tt("game.cutscene_skip", &[("key", key.as_str())]);
-
-            let gamepad_sprite_offset = match state.settings.player1_controller_type {
-                ControllerType::Keyboard => 1,
-                ControllerType::Gamepad(index) => ctx.gamepad_context.get_gamepad_sprite_offset(index as usize),
-            };
-
-            let symbols = Symbols {
-                symbols: &[(
-                    '=',
-                    state.settings.player1_controller_button_map.skip.get_rect(gamepad_sprite_offset, &state.constants),
-                )],
-                texture: "buttons",
-            };
-
-            // let width = state.font.text_width_with_rects(text.chars(), &rect_map, &state.constants);
             let width = state.font.builder().with_symbols(Some(symbols)).compute_width(&text);
             let pos_x = state.canvas_size.0 - width - 20.0;
             let pos_y = 0.0;

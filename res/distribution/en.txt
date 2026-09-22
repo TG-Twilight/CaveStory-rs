@@ -1,0 +1,40 @@
+#9500
+<MSG<FAC0005Hey, you!<NOD<CLRHold it! Before we start,
+let me ask you something.<NOD<CLRDid you get CaveStory-rs
+from its GitHub page?<YNJ9501<CLRGood! It's free there.
+Don't let anyone charge
+you for a download link!<NOD<EVE9505
+
+#9501
+<CLRDid someone make you join
+a group, follow, share,
+or watch ads to get it?<YNJ9502<CLRHah! More dirty work!
+CaveStory-rs is free.
+None of that is needed.<NOD<CLRJust use its GitHub page.
+No errands required!<NOD<EVE9504
+
+#9502
+<CLRWait... did you pay
+someone for a
+download link?<YNJ9503<CLRWhat? They charged you?
+CaveStory-rs is free
+on GitHub!<NOD<CLRKeep the listing, chats,
+and payment receipt.
+Report the seller!<NOD<CLRAsk for your money back.
+Seek compensation where
+the law allows it.<NOD<CLRAnd don't send them
+any more money!<NOD<EVE9504
+
+#9503
+<CLRWell, whoever gave it
+to you, CaveStory-rs is
+free on GitHub.<NOD<CLRNo need to buy a link
+or run errands for it!<NOD<EVE9504
+
+#9504
+<CLRWant me to show you?
+Open the CaveStory-rs
+GitHub page now?<YNJ9505<GHP
+#9505
+<CLR...Wait! I was supposed
+to be dealing with you!<NOD<CLR<POP

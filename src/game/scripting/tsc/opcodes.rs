@@ -265,6 +265,8 @@ pub enum TSCOpCode {
     /// <FRE related to player 2?
     FR2,
     // ---- Custom opcodes, for use by modders ----
+    /// <GHP, Opens the fixed CaveStory-rs project page after an in-script confirmation.
+    GHP,
 }
 
 #[derive(FromPrimitive, PartialEq, Copy, Clone)]

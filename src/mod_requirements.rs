@@ -34,8 +34,9 @@ impl ModRequirements {
     }
 
     pub fn save(&self, ctx: &Context) -> GameResult {
-        let file = filesystem::user_create(ctx, "/mod_req.json")?;
-        serde_json::to_writer_pretty(file, self)?;
+        let mut file = filesystem::user_create(ctx, "/mod_req.json")?;
+        serde_json::to_writer_pretty(&mut file, self)?;
+        std::io::Write::flush(&mut file)?;
 
         Ok(())
     }

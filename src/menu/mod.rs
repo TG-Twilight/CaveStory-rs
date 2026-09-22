@@ -22,6 +22,7 @@ const MENU_MIN_PADDING: f32 = 30.0;
 pub enum ControlMenuData {
     String(String),
     Rect(Rect<u16>),
+    RectPair(Rect<u16>, Rect<u16>),
 }
 
 #[allow(dead_code)]
@@ -689,7 +690,8 @@ impl<T: std::cmp::PartialEq + std::default::Default + Clone> Menu<T> {
                             let difficulty_name =
                                 state.loc.tt("menus.difficulty_menu.difficulty_name", &[("difficulty", &difficulty)]);
 
-                            state.font.builder().with_symbols(symbols).position(self.x as f32 + 20.0, y + 10.0).draw(
+                            let difficulty_y = y + (state.font.line_height() + 2.0).max(10.0);
+                            state.font.builder().with_symbols(symbols).position(self.x as f32 + 20.0, difficulty_y).draw(
                                 &difficulty_name,
                                 ctx,
                                 &state.constants,
@@ -740,6 +742,14 @@ impl<T: std::cmp::PartialEq + std::default::Default + Clone> Menu<T> {
 
                             let batch = state.texture_set.get_or_load_batch(ctx, &state.constants, "buttons")?;
                             batch.add_rect(self.x as f32 + self.width as f32 - 5.0 - rect_width, y, &value);
+                            batch.draw(ctx)?;
+                        }
+                        ControlMenuData::RectPair(first, second) => {
+                            let y = y + rect.height() as f32 / 2.0 - state.font.line_height() + 4.0;
+                            let right = self.x as f32 + self.width as f32 - 5.0;
+                            let batch = state.texture_set.get_or_load_batch(ctx, &state.constants, "buttons")?;
+                            batch.add_rect(right - first.width() as f32 - second.width() as f32 - 4.0, y, first);
+                            batch.add_rect(right - second.width() as f32, y, second);
                             batch.draw(ctx)?;
                         }
                     }

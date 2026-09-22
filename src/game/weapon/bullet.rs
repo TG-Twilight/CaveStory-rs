@@ -12,15 +12,40 @@ use crate::game::stage::Stage;
 use crate::util::rng::{XorShift, Xoroshiro32PlusPlus, RNG};
 
 pub struct BulletManager {
+    pub explosions: Vec<(i32, i32, bool)>,
     pub bullets: Vec<Bullet>,
     pub new_bullets: Vec<Bullet>,
     pub seeder: XorShift,
+}
+
+#[cfg(test)]
+mod feedback_tests {
+    use super::*;
+    use crate::framework::context::Context;
+
+    #[test]
+    fn missile_explosion_reports_start_once_not_each_smoke_tick() {
+        let mut ctx = Context::new();
+        ctx.headless = true;
+        ctx.filesystem.mount_vfs(Box::new(crate::data::builtin_fs::BuiltinFS::new()));
+        let mut state = SharedGameState::new(&mut ctx).unwrap();
+        let player = Player::new(&mut state, &mut ctx);
+        let (npcs, _token) = NPCList::new();
+        let mut bullets = BulletManager::new();
+        bullets.create_bullet(4096, 8192, 16, TargetPlayer::Player1, Direction::Right, &state.constants);
+        bullets.create_bullet(0, 0, 31, TargetPlayer::Player2, Direction::Right, &state.constants);
+        bullets.tick_bullets(&mut state, [&player, &player], &npcs);
+        assert_eq!(bullets.explosions, vec![(4096, 8192, false), (0, 0, true)]);
+        bullets.tick_bullets(&mut state, [&player, &player], &npcs);
+        assert!(bullets.explosions.is_empty());
+    }
 }
 
 impl BulletManager {
     #[allow(clippy::new_without_default)]
     pub fn new() -> BulletManager {
         BulletManager {
+            explosions: Vec::new(),
             bullets: Vec::with_capacity(64),
             new_bullets: Vec::with_capacity(8),
             seeder: XorShift::new(0x359c482f),
@@ -48,13 +73,20 @@ impl BulletManager {
     }
 
     pub fn tick_bullets(&mut self, state: &mut SharedGameState, players: [&Player; 2], npc_list: &NPCList) {
+        self.explosions.clear();
         let mut i = 0;
         while i < self.bullets.len() {
             {
                 let bullet = unsafe { self.bullets.get_unchecked_mut(i) };
                 i += 1;
 
+                let starting = bullet.action_num == 0 && matches!(bullet.btype, 16..=18 | 31..=33);
                 bullet.tick(state, players, npc_list, &mut self.new_bullets);
+                #[cfg(trainer_interface)]
+                for child in &mut self.new_bullets { child.trainer_weapon = bullet.trainer_weapon; }
+                if starting && bullet.action_num == 1 {
+                    self.explosions.push((bullet.x, bullet.y, bullet.btype >= 31));
+                }
             }
 
             for bullet in &mut self.new_bullets {
@@ -94,6 +126,8 @@ impl BulletManager {
 
 #[derive(Clone)]
 pub struct Bullet {
+    #[cfg(trainer_interface)]
+    pub trainer_weapon: u16,
     pub btype: u16,
     pub x: i32,
     pub y: i32,
@@ -147,6 +181,8 @@ impl Bullet {
         });
 
         Bullet {
+            #[cfg(trainer_interface)]
+            trainer_weapon: 0,
             btype,
             x,
             y,

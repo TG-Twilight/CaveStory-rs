@@ -12,6 +12,22 @@ use crate::graphics::texture_set::G_MAG;
 
 pub const ORG_NAME: &str = "io.github";
 pub const APP_NAME: &str = "doukutsu_rs";
+pub const APP_DISPLAY_NAME: &str = "CaveStory-rs";
+
+#[cfg(test)]
+#[path = "build_version.rs"]
+mod build_version;
+
+#[cfg(test)]
+mod build_version_tests {
+    #[test]
+    fn title_version_is_an_eight_digit_build_date() {
+        let banner = super::VERSION_BANNER.as_str();
+        let version = banner.strip_prefix("CaveStory-rs ").unwrap();
+        assert_eq!(version.len(), 8);
+        assert!(version.bytes().all(|byte| byte.is_ascii_digit()));
+    }
+}
 
 /// Multiply cave story degrees (0-255, which corresponds to 0°-360°) with this constant to get
 /// respective value in radians.
@@ -19,8 +35,8 @@ pub const CDEG_RAD: f64 = std::f64::consts::PI / 128.0;
 
 lazy_static! {
     pub static ref VERSION_BANNER: String = {
-        let version = option_env!("DRS_BUILD_VERSION_OVERRIDE").unwrap_or(env!("CARGO_PKG_VERSION"));
-        format!("doukutsu-rs {}", version)
+        let version = env!("CAVESTORY_BUILD_VERSION");
+        format!("{} {}", APP_DISPLAY_NAME, version)
     };
 }
 

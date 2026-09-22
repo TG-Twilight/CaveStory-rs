@@ -1,0 +1,23 @@
+<resources>
+    <string name="shizuku_title">Rumble output</string>
+    <string name="shizuku_description">Move to select and test. Press confirm on an option or use Test rumble to test without closing. Choose OK to save. Bluetooth needs Shizuku or Sui in Shell mode with access granted; USB uses system output. Player rumble switches still apply.</string>
+    <string name="shizuku_off">Disabled</string>
+    <string name="shizuku_enable">Enable and authorize</string>
+    <string name="shizuku_disable">Disable</string>
+    <string name="shizuku_retry">Authorize / reconnect</string>
+    <string name="shizuku_permission">Authorization needed. If denied permanently, allow access in Shizuku or Sui.</string>
+    <string name="shizuku_shell_required">Shell access required. Restart Shizuku using ADB, or choose Shell in Sui.</string>
+    <string name="shizuku_ready">Shell service ready. Rumble requires a supported connected controller.</string>
+    <string name="shizuku_connecting">Connecting to Shell service…</string>
+    <string name="shizuku_device_unsupported">This input device could not be matched to a supported Bluetooth controller.</string>
+    <string name="shizuku_failed">This system does not provide the required Bluetooth output. Controller input remains available.</string>
+    <string name="shizuku_unavailable">Service unavailable. Start Shizuku or Sui in Shell mode, then reconnect.</string>
+    <string name="rumble_output_system">System output</string>
+    <string name="rumble_output_bluetooth">Bluetooth output (setReport)</string>
+    <string name="rumble_output_player">Rumble output ? Player %1$d</string>
+    <string name="rumble_output_no_device">Connect a controller assigned to this player to test.</string>
+    <string name="rumble_output_disabled">Preview unavailable: enable rumble and assign an active player controller.</string>
+    <string name="rumble_output_sent">Request sent. Check whether the controller vibrates.</string>
+    <string name="rumble_output_not_sent">No request sent. Check the device and authorization, then use Test rumble.</string>
+    <string name="rumble_output_test">Test rumble</string>
+</resources>

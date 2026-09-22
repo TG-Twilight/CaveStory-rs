@@ -1,0 +1,242 @@
+{
+  "name": "简体中文",
+  "font": "fonts/chinese-12.fnt",
+  "font_scale": "1.0",
+  "encoding": "gbk",
+  "stage_encoding": "gbk",
+  "common": {
+    "name": "CaveStory-rs",
+    "back": "< 返回",
+    "yes": "是",
+    "no": "否",
+    "on": "开",
+    "off": "关"
+  },
+  "menus": {
+    "main_menu": {
+      "start": "开始游戏",
+      "challenges": "挑战模式",
+      "options": "选项",
+      "editor": "编辑器",
+      "jukebox": "音乐欣赏",
+      "quit": "退出游戏"
+    },
+    "pause_menu": {
+      "resume": "继续游戏",
+      "retry": "重试",
+      "options": "选项",
+      "title": "返回标题",
+      "title_confirm": "返回标题画面？",
+      "quit": "退出游戏",
+      "quit_confirm": "退出游戏？",
+      "add_player2": "加入玩家二",
+      "drop_player2": "移除玩家二"
+    },
+    "save_menu": {
+      "new": "新建存档",
+      "delete_info": "按右方向键删除",
+      "delete_confirm": "删除存档？",
+      "invalid_save": "无效存档"
+    },
+    "difficulty_menu": {
+      "title": "选择难度",
+      "easy": "简单",
+      "normal": "普通",
+      "hard": "困难",
+      "difficulty_name": "难度：{difficulty}",
+      "unknown": "（未知）"
+    },
+    "coop_menu": {
+      "title": "选择玩家人数",
+      "one": "单人游戏",
+      "two": "双人游戏"
+    },
+    "skin_menu": {
+      "title": "选择玩家二的外观",
+      "label": "外观："
+    },
+    "challenge_menu": {
+      "start": "开始",
+      "no_replay": "不播放录像",
+      "replay_best": "播放最佳录像",
+      "replay_last": "播放最近录像",
+      "delete_replay": "删除最佳录像"
+    },
+    "challenges_menu": {
+      "empty_mod_name": "未命名模组",
+      "empty_mod_description": "暂无说明"
+    },
+    "options_menu": {
+      "graphics": "画面…",
+      "graphics_menu": {
+        "window_mode": {
+          "entry": "显示模式：",
+          "windowed": "窗口",
+          "fullscreen": "全屏"
+        },
+        "lighting_effects": "光照效果：",
+        "weapon_light_cone": "武器照明：",
+        "screen_shake": {
+          "entry": "画面振动强度：",
+          "full": "1 倍",
+          "half": "0.5 倍",
+          "off": "关闭"
+        },
+        "motion_interpolation": "运动插值：",
+        "subpixel_scrolling": "亚像素滚动：",
+        "original_textures": "原版贴图：",
+        "seasonal_textures": "季节贴图：",
+        "renderer": "渲染器：",
+        "vsync_mode": {
+          "entry": "垂直同步：",
+          "uncapped": "不限帧率",
+          "uncapped_desc": "关闭垂直同步。",
+          "vsync": "启用",
+          "vsync_desc": "开启垂直同步。",
+          "vrr_1x": "可变刷新率（1 倍）",
+          "vrr_1x_desc": "可用时使用 G-Sync/FreeSync。",
+          "vrr_2x": "可变刷新率（2 倍）",
+          "vrr_2x_desc": "可用时使用 G-Sync/FreeSync。",
+          "vrr_3x": "可变刷新率（3 倍）",
+          "vrr_3x_desc": "可用时使用 G-Sync/FreeSync。"
+        }
+      },
+      "sound": "声音…",
+      "sound_menu": {
+        "music_volume": "音乐音量",
+        "effects_volume": "音效音量",
+        "bgm_interpolation": {
+          "entry": "BGM 插值：",
+          "linear": "线性",
+          "linear_desc": "速度快，接近免费版在 Vista 及以后系统上的音效",
+          "cosine": "余弦",
+          "cosine_desc": "余弦插值",
+          "cubic": "三次",
+          "cubic_desc": "三次插值",
+          "linear_lp": "线性＋低通",
+          "linear_lp_desc": "速度最慢，接近免费版在 XP 上的音效",
+          "nearest": "最近邻",
+          "nearest_desc": "速度最快，音质最低"
+        },
+        "soundtrack": "配乐：{soundtrack}"
+      },
+      "controls": "操作…",
+      "controls_menu": {
+        "display_touch_controls": "显示触屏按键：",
+        "auto_hide_touch_controls": "自动隐藏触屏按键（10秒）：",
+        "touch_controls_required": "触屏按键：无外设时自动开启"
+      },
+      "language": "语言…",
+      "language_menu": {
+        "warnings": {
+          "different_type": "{icon} 此语言的游戏数据类型不同，存档可能无法在其他语言下使用。",
+          "no_data": "{icon} 未找到此语言的游戏数据，仅翻译菜单。"
+        }
+      },
+      "behavior": "游戏设置…",
+      "behavior_menu": {
+        "game_timing": {
+          "entry": "逻辑更新频率：",
+          "50tps": "50 TPS（免费版）",
+          "60tps": "60 TPS（CS+）"
+        },
+        "pause_on_focus_loss": "窗口失去焦点时暂停：",
+        "cutscene_skip_method": {
+          "entry": "跳过剧情：",
+          "hold": "长按跳过",
+          "fastforward": "快进",
+          "auto": "自动"
+        },
+        "discord_rpc": "Discord 游戏状态：",
+        "allow_strafe": "允许锁定朝向："
+      },
+      "links": "相关链接…",
+      "links_menu": {
+        "tribute": "洞窟物语纪念站",
+        "github": "CaveStory-rs GitHub",
+        "get_plus": "获取洞窟物语+",
+        "pixel_shop": "Pixel 的商店（Shop Pi）",
+        "studio_pixel": "Studio Pixel 官方网站"
+      },
+      "advanced": "高级选项…",
+      "advanced_menu": {
+        "open_user_data": "打开用户数据目录",
+        "open_game_data": "打开游戏数据目录",
+        "make_portable": "创建便携用户目录"
+      },
+      "portable_menu": {
+        "explanation": "将在游戏旁创建用户数据目录，并复制现有设置与存档。",
+        "restart_question": "重新加载游戏以使用新目录？",
+        "restart": "保存并返回标题",
+        "cancel": "取消"
+      }
+    },
+    "controls_menu": {
+      "layout": "手柄布局：",
+      "custom_layout": "自定义",
+      "select_player": {
+        "entry": "选择玩家：",
+        "player_1": "玩家一",
+        "player_2": "玩家二"
+      },
+      "controller": {
+        "automatic": "自动切换",
+        "entry": "控制设备…",
+        "keyboard": "键盘",
+        "touch_controls_or_keyboard": "触屏／键盘"
+      },
+      "rebind": "设置按键…",
+      "rebind_menu": {
+        "up": "上",
+        "down": "下",
+        "left": "左",
+        "right": "右",
+        "jump": "跳跃",
+        "shoot": "射击",
+        "prev_weapon": "上一武器",
+        "next_weapon": "下一武器",
+        "inventory": "物品栏",
+        "map": "地图系统",
+        "skip": "跳过剧情",
+        "strafe": "锁定朝向",
+        "menu_ok": "菜单选择／确认",
+        "menu_back": "菜单返回／取消"
+      },
+      "rebind_confirm_menu": {
+        "title": "请按下用于“{control}”的按键",
+        "cancel": "（按 Esc 取消）",
+        "cancel_touch": "（按 Esc 或触碰屏幕取消）"
+      },
+      "rumble": "手柄振动：",
+      "rumble_mode": "振动模式：",
+      "rumble_output": "振动输出方式",
+      "rumble_original": "原版",
+      "rumble_enhanced": "增强",
+      "reset_confirm": "恢复默认…",
+      "reset_confirm_menu_title": "恢复默认按键设置？"
+    }
+  },
+  "soundtrack": {
+    "organya": "Organya",
+    "remastered": "重制版",
+    "new": "新版",
+    "famitracks": "Famitracks",
+    "ridiculon": "Ridiculon"
+  },
+  "game": {
+    "hud": {
+      "air": "氧气"
+    },
+    "stage_select": "传送",
+    "caret": {
+      "level_up": "升级",
+      "level_down": "降级",
+      "empty": "没弹药了！"
+    },
+    "inventory": {
+      "weapons": "武器",
+      "items": "物品"
+    },
+    "cutscene_skip": "长按 {key} 跳过剧情"
+  }
+}

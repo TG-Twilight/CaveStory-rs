@@ -1,9 +1,9 @@
 {
-  "name": "Japanese",
+  "name": "日本語",
   "font": "csfontjp.fnt",
   "font_scale": "0.5",
   "common": {
-    "name": "doukutsu-rs",
+    "name": "CaveStory-rs",
     "back": "< 戻る",
     "yes": "はい",
     "no": "いいえ",
@@ -17,7 +17,7 @@
       "options": "オプション",
       "editor": "レベルエディタ",
       "jukebox": "ジュークボックス",
-      "quit": "辞める"
+      "quit": "終了"
     },
     "pause_menu": {
       "resume": "再開",
@@ -25,8 +25,8 @@
       "options": "設定",
       "title": "メインメニュー",
       "title_confirm": "メインメニュー？",
-      "quit": "辞める",
-      "quit_confirm": "辞める？",
+      "quit": "終了",
+      "quit_confirm": "終了しますか？",
       "add_player2": "プレーヤー2を追加",
       "drop_player2": "プレーヤー2を削除"
     },
@@ -86,17 +86,17 @@
         "seasonal_textures": "季節ものテクスチャ：",
         "renderer": "レンダラ：",
         "vsync_mode": {
-          "entry": "V-Sync:",
-          "uncapped": "Uncapped",
-          "uncapped_desc": "V-Sync Off.",
-          "vsync": "Enabled",
-          "vsync_desc": "V-Sync On.",
-          "vrr_1x": "Variable Refresh Rate (1x)",
-          "vrr_1x_desc": "Uses (G-/Free)Sync if available.",
-          "vrr_2x": "Variable Refresh Rate (2x)",
-          "vrr_2x_desc": "Uses (G-/Free)Sync if available.",
-          "vrr_3x": "Variable Refresh Rate (3x)",
-          "vrr_3x_desc": "Uses (G-/Free)Sync if available."
+          "entry": "垂直同期：",
+          "uncapped": "無制限",
+          "uncapped_desc": "垂直同期を無効にします。",
+          "vsync": "有効",
+          "vsync_desc": "垂直同期を有効にします。",
+          "vrr_1x": "可変リフレッシュレート（1倍）",
+          "vrr_1x_desc": "対応画面ではG-Sync/FreeSyncを使用します。",
+          "vrr_2x": "可変リフレッシュレート（2倍）",
+          "vrr_2x_desc": "対応画面ではG-Sync/FreeSyncを使用します。",
+          "vrr_3x": "可変リフレッシュレート（3倍）",
+          "vrr_3x_desc": "対応画面ではG-Sync/FreeSyncを使用します。"
         }
       },
       "sound": "サウンド",
@@ -109,8 +109,8 @@
           "linear_desc": "速い、フリーウェア版に近い（Vista+）",
           "cosine": "余弦",
           "cosine_desc": "余弦補間",
-          "cubic": "立方体",
-          "cubic_desc": "立方体補間",
+          "cubic": "三次補間",
+          "cubic_desc": "三次補間を使用します。",
           "linear_lp": "線形補間+LP",
           "linear_lp_desc": "最も遅い、フリーウェア版に近い（XP）",
           "nearest": "最近傍",
@@ -120,7 +120,9 @@
       },
       "controls": "ボタン変更",
       "controls_menu": {
-        "display_touch_controls": "タッチコントロールを表示する: "
+        "display_touch_controls": "タッチコントロールを表示する: ",
+        "auto_hide_touch_controls": "タッチボタン自動非表示（10秒）: ",
+        "touch_controls_required": "タッチボタン：外部機器なしで表示"
       },
       "language": "言語",
       "language_menu": {
@@ -133,19 +135,27 @@
       "behavior_menu": {
         "game_timing": {
           "entry": "ゲームのタイミング：",
-          "50tps": "50tps (freeware)",
-          "60tps": "60tps (CS+)"
+          "50tps": "50 TPS（無料版）",
+          "60tps": "60 TPS（CS+）"
         },
         "pause_on_focus_loss": "フォーカスが外れた時のポーズ：",
         "cutscene_skip_method": {
           "entry": "カットシーンをスキップ",
-          "hold": "を押し続け",
-          "fastforward": "はやおくり"
+          "hold": "長押し",
+          "fastforward": "早送り",
+          "auto": "自動"
         },
-        "discord_rpc": "Discord Rich Presence:",
+        "discord_rpc": "Discordにプレイ状況を表示：",
         "allow_strafe": "ストレイフを許可する："
       },
       "links": "リンク",
+      "links_menu": {
+        "tribute": "洞窟物語ファンサイト",
+        "github": "CaveStory-rs GitHub",
+        "get_plus": "Cave Story+を購入",
+        "pixel_shop": "開発室Pixelのお店（Shop Pi）",
+        "studio_pixel": "開発室Pixelのウェブサイト"
+      },
       "advanced": "詳細設定",
       "advanced_menu": {
         "open_user_data": "ユーザープロファイルを開く",
@@ -160,15 +170,18 @@
       }
     },
     "controls_menu": {
+      "layout": "ゲームパッド配置：",
+      "custom_layout": "カスタム",
       "select_player": {
         "entry": "プレイヤーを選択：",
         "player_1": "プレーヤー 1",
         "player_2": "プレーヤー 2"
       },
       "controller": {
+        "automatic": "自動切り替え",
         "entry": "コントローラ",
         "keyboard": "キーボード",
-        "touch_controls_or_keyboard": "タタッチコントロール/キーボードッチ操作／キーボード"
+        "touch_controls_or_keyboard": "タッチ操作／キーボード"
       },
       "rebind": "再バインド",
       "rebind_menu": {
@@ -180,19 +193,23 @@
         "shoot": "ショット",
         "prev_weapon": "前の武器",
         "next_weapon": "次の武器",
-        "inventory": "在庫",
+        "inventory": "持ち物",
         "map": "マップシステム",
         "skip": "スキップ",
         "strafe": "ストレイフ",
         "menu_ok": "メニュー選択／OK",
-        "menu_back": "メニュー残す／キャンセル"
+        "menu_back": "メニューに戻る／キャンセル"
       },
       "rebind_confirm_menu": {
-        "title": "新しい「ジャンプ」ボタンを押す",
+        "title": "「{control}」に使うボタンを押す",
         "cancel": "(Escキーを押してキャンセル)",
         "cancel_touch": "(Escキーを押すか画面をタッチしてキャンセル)"
       },
-      "rumble": "ランブル",
+      "rumble": "コントローラーの振動：",
+      "rumble_mode": "振動モード：",
+      "rumble_output": "振動出力方式",
+      "rumble_original": "標準",
+      "rumble_enhanced": "拡張",
       "reset_confirm": "リセット",
       "reset_confirm_menu_title": "ボタンをリセットしますか？"
     }

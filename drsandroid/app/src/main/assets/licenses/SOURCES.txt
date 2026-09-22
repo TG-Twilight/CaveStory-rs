@@ -1,0 +1,8 @@
+Shizuku API/provider 13.1.5
+https://raw.githubusercontent.com/RikkaApps/Shizuku-API/a27f6e4151ba7b39965ca47edb2bf0aeed7102e5/LICENSE
+SHA256: 64870037f294b6f2b75c8ebe77cc0702acb3b64f86b4b0e58bf8558525303686
+
+CaveStory-rs: repository root LICENSE
+SDL2: pinned SDL2 submodule LICENSE.txt
+Trainer dependencies: ../TRAINER-LICENSES.txt
+Font licenses: bundled font overlay archives

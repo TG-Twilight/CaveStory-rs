@@ -1,3 +1,5 @@
+pub const PROJECT_URL: &str = "https://github.com/TG-Twilight/CaveStory-rs";
+
 #[cfg(feature = "webbrowser")]
 pub use webbrowser::open;
 

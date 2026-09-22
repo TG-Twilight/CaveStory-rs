@@ -1,0 +1,16 @@
+<resources>
+    <string name="distribution_question">Where did you get CaveStory-rs?</string>
+    <string name="distribution_source_project">CaveStory-rs GitHub repository / official website</string>
+    <string name="distribution_source_gated">Another free channel with access requirements</string>
+    <string name="distribution_source_paid">Paid cloud downloads from Taobao, Xianyu, or other sellers</string>
+    <string name="distribution_title">CaveStory-rs is freely available</string>
+    <string name="distribution_project_message">You have the right source. This project is freely available from its GitHub repository. No purchase, group membership, following, sharing, or advertisement viewing is required. Share the project link with your friends.</string>
+    <string name="distribution_gated_message">You can download this project directly for free. You do not need to join a group, follow an account, share a post, watch advertisements, or complete promotional tasks to unlock it. Do not let third parties use this free project to draw you into such requirements. Use the project page below.</string>
+    <string name="distribution_paid_message">This port is freely available from the project on GitHub. You do not need to purchase a download link. If you paid for these resources, keep the listing, chat, and payment records. Report the seller to the marketplace, request a refund, and seek compensation where applicable under the law. Do not make further payments. The free source is linked below.</string>
+    <string name="distribution_signature_title">Signature mismatch — game blocked</string>
+    <string name="distribution_signature_message">This APK does not match the CaveStory-rs release signing certificate, or its signature could not be verified. It may have been modified and resold, which can pose security risks. The game will not start.\n\nIf you paid for these resources, keep the listing, chat, and payment records. Report the seller, request a refund, and seek compensation where applicable under the law.\n\nGet the free release from the project page. Your existing saves and settings have not been deleted.</string>
+    <string name="distribution_project">Open project page</string>
+    <string name="distribution_continue">Understood, continue</string>
+    <string name="distribution_back">Choose again</string>
+    <string name="distribution_no_browser">No browser is available. Project address:</string>
+</resources>

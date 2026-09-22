@@ -1,4 +1,5 @@
 use crate::common::Rect;
+use crate::graphics::font::Font;
 use crate::entity::GameEntity;
 use crate::framework::context::Context;
 use crate::framework::error::GameResult;
@@ -148,12 +149,25 @@ impl GameEntity<(&mut Context, &Player, &Player)> for StageSelect {
 
         let batch = state.texture_set.get_or_load_batch(ctx, &state.constants, "TextBox")?;
 
-        batch.add_rect((state.canvas_size.0 / 2.0) - 32.0, self.stage_select_text_y_pos as f32, &state.constants.textscript.stage_select_text);
+        let label = state.loc.t_optional("game.stage_select").filter(|text| !text.trim().is_empty());
+        if label.is_none() {
+            batch.add_rect((state.canvas_size.0 / 2.0) - 32.0, self.stage_select_text_y_pos as f32, &state.constants.textscript.stage_select_text);
+        }
         if slot_count > 0 {
             batch.add_rect(slot_offset + self.current_teleport_slot as f32 * 40.0, 64.0, &state.constants.textscript.cursor[self.tick / 2 % 2]);
         }
 
         batch.draw(ctx)?;
+
+        if let Some(text) = label {
+            state.font.builder()
+                .position(
+                    (state.canvas_size.0 / 2.0) - 32.0,
+                    self.stage_select_text_y_pos as f32 - (state.font.line_height() - 8.0).max(0.0),
+                )
+                .center(64.0)
+                .draw(text, ctx, &state.constants, &mut state.texture_set)?;
+        }
 
         if state.settings.touch_controls {
             let (_, off_top, off_right, _) = crate::framework::graphics::screen_insets_scaled(ctx, state.scale);

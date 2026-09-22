@@ -63,3 +63,37 @@ $RECYCLE.BIN/
 *.log
 
 3rdparty/
+# Local source assets and generated investigation output
+/SUCHAS/
+/.cache/
+/artifacts/
+
+# Python asset tooling
+__pycache__/
+*.pyc
+
+# Local maintainer handoff notes (contain device and workstation details)
+/AGENTS.md
+/MEMORY.md
+
+# Public documentation is explicitly selected. Keep internal reports outside this repo.
+/docs/*
+!/docs/README.md
+!/docs/README_zh-CN.md
+!/docs/README_ja-JP.md
+!/docs/CONTRIBUTING.md
+!/docs/releases/
+/docs/releases/*
+!/docs/releases/20260922.md
+**/AGENTS.md
+**/MEMORY.md
+/res/readme/hero-prompt.txt
+/res/readme/asset-manifest.json
+
+# Credentials and local player state
+*.jks
+*.keystore
+.env
+.env.*
+settings.json
+/user/

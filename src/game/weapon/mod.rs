@@ -66,6 +66,10 @@ impl WeaponLevel {
 
 #[derive(Clone)]
 pub struct Weapon {
+    #[cfg(trainer_interface)]
+    pub trainer_lock_experience: bool,
+    #[cfg(trainer_interface)]
+    pub trainer_lock_ammo: bool,
     pub wtype: WeaponType,
     pub level: WeaponLevel,
     pub experience: u16,
@@ -79,7 +83,7 @@ pub struct Weapon {
 
 impl Weapon {
     pub fn new(wtype: WeaponType, level: WeaponLevel, experience: u16, ammo: u16, max_ammo: u16) -> Weapon {
-        Weapon { wtype, level, experience, ammo, max_ammo, refire_timer: 0, empty_counter: 0, counter1: 0, counter2: 0 }
+        Weapon { #[cfg(trainer_interface)] trainer_lock_experience: false, #[cfg(trainer_interface)] trainer_lock_ammo: false, wtype, level, experience, ammo, max_ammo, refire_timer: 0, empty_counter: 0, counter1: 0, counter2: 0 }
     }
 
     /// Consume a specified amount of bullets, returns true if there was enough ammo.
@@ -89,6 +93,8 @@ impl Weapon {
         }
 
         if self.ammo >= amount {
+            #[cfg(trainer_interface)]
+            if self.trainer_lock_ammo { return true; }
             self.ammo -= amount;
             return true;
         }
@@ -113,6 +119,8 @@ impl Weapon {
 
     /// Refill a specified amount of bullets.
     pub fn refill_ammo(&mut self, amount: u16) {
+        #[cfg(trainer_interface)]
+        if self.trainer_lock_ammo { return; }
         if self.max_ammo != 0 {
             self.ammo = self.ammo.saturating_add(amount).min(self.max_ammo);
         }
@@ -131,6 +139,8 @@ impl Weapon {
     }
 
     pub fn add_xp(&mut self, exp: u16, player: &mut Player, state: &mut SharedGameState) {
+        #[cfg(trainer_interface)]
+        if self.trainer_lock_experience { return; }
         let curr_level_idx = self.level as usize - 1;
         let lvl_table = state.constants.weapon.level_table[self.wtype as usize];
 
@@ -158,6 +168,8 @@ impl Weapon {
     }
 
     pub fn reset_xp(&mut self) {
+        #[cfg(trainer_interface)]
+        if self.trainer_lock_experience { return; }
         self.level = WeaponLevel::Level1;
         self.experience = 0;
     }
@@ -183,6 +195,8 @@ impl Weapon {
             self.refire_timer = 4;
         }
 
+        #[cfg(trainer_interface)]
+        let first_bullet = bullet_manager.bullets.len();
         // todo lua hook
 
         match self.wtype {
@@ -200,5 +214,7 @@ impl Weapon {
             WeaponType::Nemesis => self.tick_nemesis(player, player_id, bullet_manager, state),
             WeaponType::Spur => self.tick_spur(player, player_id, bullet_manager, state),
         }
+        #[cfg(trainer_interface)]
+        for bullet in &mut bullet_manager.bullets[first_bullet..] { bullet.trainer_weapon = self.wtype as u16; }
     }
 }

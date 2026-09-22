@@ -1,11 +1,10 @@
 name: Task
 description: This is a template for maintainers to use. Please do not submit issues using this template, unless asked by a maintainer.
-type: "Task"
 body:
   - type: markdown
     attributes:
       value: |
-        Use this template to create a TO-DO task for the doukutsu-rs project.
+        Use this template to create a TO-DO task for the CaveStory-rs project.
 
   - type: textarea
     id: plan

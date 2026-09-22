@@ -1,0 +1,38 @@
+#9500
+<MSG<FAC0005Hey! One question first.<NOD<CLRWhere did you get
+CaveStory-rs?<NOD<CLRFrom this project's
+GitHub repo or website?<YNJ9501<CLRThat's the place!
+It's a free download.
+Tell your friends, too!<NOD<CLR<POP
+
+#9501
+<CLRWas it free, but you had
+to join, follow, share,
+or watch ads to get it?<YNJ9502<CLRThis project is free.
+No joining or promotion
+is required to get it.<NOD<CLRDon't let someone use it
+as bait! Download it from
+the project page.<NOD<EVE9504
+
+#9502
+<CLRDid you pay a seller on
+Taobao, Xianyu, etc. for
+a cloud download link?<YNJ9503<CLRThis port is available
+for free on GitHub.
+You do not need to pay!<NOD<CLRKeep the listing, chat,
+and payment records.
+Report the seller!<NOD<CLRAsk for a refund and seek
+compensation where the
+law allows. Pay no more!<NOD<EVE9504
+
+#9503
+<CLRWherever you got it,
+this project offers free
+downloads without tasks.<NOD<EVE9504
+
+#9504
+<CLROpen this project's
+GitHub page now?
+Come back to continue.<YNJ9505<GHP
+#9505
+<CLRNow, where were we?<NOD<CLR<POP

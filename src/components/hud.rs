@@ -9,6 +9,7 @@ use crate::game::inventory::Inventory;
 use crate::game::shared_game_state::SharedGameState;
 use crate::game::player::Player;
 use crate::game::weapon::WeaponType;
+use crate::graphics::font::Font;
 
 pub struct HUD {
     pub alignment: Alignment,
@@ -181,6 +182,16 @@ impl GameEntity<(&Player, &mut Inventory)> for HUD {
         }
 
         let (left, top, right, bottom) = screen_insets_scaled(ctx, state.scale);
+        let level_label = state.loc.t_optional("game.hud.level").filter(|text| !text.trim().is_empty());
+        let max_label = state.loc.t_optional("game.hud.max").filter(|text| !text.trim().is_empty());
+        // Give translated lettering its own row height, keeping ammo above and HP below it.
+        let row_extra = if level_label.is_some() || max_label.is_some() {
+            (state.font.line_height() - 8.0).max(0.0)
+        } else {
+            0.0
+        };
+        let level_y = 32.0 + top + row_extra / 2.0;
+        let life_y = 40.0 + top + row_extra;
 
         // none
         let weap_x = self.weapon_x_pos as f32;
@@ -212,21 +223,25 @@ impl GameEntity<(&Player, &mut Inventory)> for HUD {
             // per
             batch.add_rect(bar_offset + weap_x + 32.0, 24.0 + top, &Rect::new_size(72, 48, 8, 8));
             // lv
-            batch.add_rect(num_offset + weap_x, 32.0 + top, &Rect::new_size(80, 80, 16, 8));
+            if level_label.is_none() {
+                batch.add_rect(num_offset + weap_x, level_y, &Rect::new_size(80, 80, 16, 8));
+            }
             // xp box
-            batch.add_rect(bar_offset + weap_x + 24.0, 32.0 + top, &Rect::new_size(0, 72, 40, 8));
+            batch.add_rect(bar_offset + weap_x + 24.0, level_y, &Rect::new_size(0, 72, 40, 8));
 
             if self.max_level {
-                batch.add_rect(bar_offset + weap_x + 24.0, 32.0 + top, &Rect::new_size(40, 72, 40, 8));
+                if max_label.is_none() {
+                    batch.add_rect(bar_offset + weap_x + 24.0, level_y, &Rect::new_size(40, 72, 40, 8));
+                }
             } else if self.max_xp > 0 {
                 // xp bar
                 let bar_width = (self.xp as f32 / self.max_xp as f32 * 40.0) as u16;
 
-                batch.add_rect(bar_offset + weap_x + 24.0, 32.0 + top, &Rect::new_size(0, 80, bar_width, 8));
+                batch.add_rect(bar_offset + weap_x + 24.0, level_y, &Rect::new_size(0, 80, bar_width, 8));
             }
 
             if (self.xp_bar_counter & 0x02) != 0 {
-                batch.add_rect(bar_offset + weap_x + 24.0, 32.0 + top, &Rect::new_size(40, 80, 40, 8));
+                batch.add_rect(bar_offset + weap_x + 24.0, level_y, &Rect::new_size(40, 80, 40, 8));
             }
 
             if self.max_life != 0 {
@@ -234,18 +249,25 @@ impl GameEntity<(&Player, &mut Inventory)> for HUD {
                 let bar_width = (self.life as f32 / self.max_life as f32 * 39.0) as u16;
 
                 // heart/hp number box
-                batch.add_rect(num_offset + 16.0, 40.0 + top, &Rect::new_size(0, 40, 24, 8));
+                batch.add_rect(num_offset + 16.0, life_y, &Rect::new_size(0, 40, 24, 8));
                 // life box
-                batch.add_rect(bar_offset + 40.0, 40.0 + top, &Rect::new_size(24, 40, 40, 8));
+                batch.add_rect(bar_offset + 40.0, life_y, &Rect::new_size(24, 40, 40, 8));
                 // yellow bar
-                batch.add_rect(bar_offset + 40.0, 40.0 + top, &Rect::new_size(0, 32, yellow_bar_width, 8));
+                batch.add_rect(bar_offset + 40.0, life_y, &Rect::new_size(0, 32, yellow_bar_width, 8));
                 // life
-                batch.add_rect(bar_offset + 40.0, 40.0 + top, &Rect::new_size(0, 24, bar_width, 8));
+                batch.add_rect(bar_offset + 40.0, life_y, &Rect::new_size(0, 24, bar_width, 8));
             }
         }
 
+        let air_label = state.loc.t_optional("game.hud.air").filter(|text| !text.trim().is_empty());
         if self.air_counter > 0 {
-            let rect = if self.air % 30 > 10 { Rect::new_size(112, 72, 32, 8) } else { Rect::new_size(112, 80, 32, 8) };
+            // Keep the original flashing arrow even when the adjacent AIR lettering is translated.
+            let width = if air_label.is_some() { 8 } else { 32 };
+            let rect = if self.air % 30 > 10 {
+                Rect::new_size(112, 72, width, 8)
+            } else {
+                Rect::new_size(112, 80, width, 8)
+            };
 
             batch.add_rect(
                 left + ((state.canvas_size.0 - left - right) / 2.0).floor() - 40.0 + air_offset,
@@ -255,6 +277,33 @@ impl GameEntity<(&Player, &mut Inventory)> for HUD {
         }
 
         batch.draw(ctx)?;
+
+        if !self.shock {
+            if let Some(text) = level_label {
+                state.font.builder().position(num_offset + weap_x, 32.0 + top).center(16.0)
+                    .draw(text, ctx, &state.constants, &mut state.texture_set)?;
+            }
+            // The original XP flash covers MAX; hide taller lettering for that same frame.
+            if self.max_level && (self.xp_bar_counter & 0x02) == 0 {
+                if let Some(text) = max_label {
+                    state.font.builder().position(bar_offset + weap_x + 24.0, 32.0 + top).center(40.0)
+                        .draw(text, ctx, &state.constants, &mut state.texture_set)?;
+                }
+            }
+        }
+
+        if self.air_counter > 0 {
+            if let Some(text) = air_label {
+                state.font.builder()
+                    .position(
+                        left + ((state.canvas_size.0 - left - right) / 2.0).floor() - 32.0 + air_offset,
+                        top + ((state.canvas_size.1 - top - bottom) / 2.0).floor()
+                            - (state.font.line_height() - 8.0) / 2.0,
+                    )
+                    .center(24.0)
+                    .draw(text, ctx, &state.constants, &mut state.texture_set)?;
+            }
+        }
         let batch = state.texture_set.get_or_load_batch(ctx, &state.constants, "ArmsImage")?;
 
         if self.weapon_count != 0 {
@@ -316,8 +365,8 @@ impl GameEntity<(&Player, &mut Inventory)> for HUD {
             draw_number(bar_offset + weap_x + 64.0, 24.0 + top, self.max_ammo as usize, Alignment::Right, state, ctx)?;
         }
         if !self.shock {
-            draw_number(num_offset + weap_x + 24.0, 32.0 + top, self.current_level, Alignment::Right, state, ctx)?;
-            draw_number(num_offset + 40.0, 40.0 + top, self.life_bar as usize, Alignment::Right, state, ctx)?;
+            draw_number(num_offset + weap_x + 24.0, level_y, self.current_level, Alignment::Right, state, ctx)?;
+            draw_number(num_offset + 40.0, life_y, self.life_bar as usize, Alignment::Right, state, ctx)?;
         }
 
         Ok(())

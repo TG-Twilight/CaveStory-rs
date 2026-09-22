@@ -591,6 +591,9 @@ impl SharedGameState {
             constants.set_active_root(ctx, path, settings, sound_manager);
         }
 
+        // Same-format translations share a root, but still change the search paths.
+        constants.rebuild_path_list(None, Season::current(), settings);
+
         constants.textscript.encoding = if let Some(encoding) = locale.encoding {
             encoding
         } else {
@@ -631,17 +634,16 @@ impl SharedGameState {
             return;
         };
 
-        let prev_root = self.constants.active_root.path.clone();
-
         let font = Self::try_update_locale(ctx, &mut self.constants, &self.settings, &mut self.sound_manager, &locale).unwrap();
         self.loc = locale;
         self.font = font;
 
-        let _ = if prev_root != self.constants.active_root.path {
-            self.reload_resources(ctx).and(self.reload_mod_list(ctx))
-        } else {
-            self.reload_stage_table(ctx)
-        };
+        // Root identity alone does not detect an overlaid language change.
+        // Reload global scripts (items/credits), map names and cached textures.
+        if let Err(error) = self.reload_resources(ctx).and_then(|_| self.reload_mod_list(ctx)) {
+            log::error!("Failed to reload language resources: {}", error);
+        }
+        self.reload_graphics();
     }
 
     pub fn graphics_reset(&mut self) {
@@ -705,12 +707,9 @@ impl SharedGameState {
         target_player: Option<TargetPlayer>,
     ) -> GameResult {
         if let Some(save_path) = self.get_save_filename(self.save_slot) {
-            if let Ok(data) = filesystem::open_options(ctx, save_path, OpenOptions::new().write(true).create(true)) {
-                let profile = GameProfile::dump(self, game_scene, target_player);
-                profile.write_save(data)?;
-            } else {
-                log::warn!("Cannot open save file.");
-            }
+            let data = filesystem::open_options(ctx, save_path, OpenOptions::new().write(true).create(true).truncate(true))?;
+            let profile = GameProfile::dump(self, game_scene, target_player);
+            profile.write_save(data)?;
         } else {
             log::info!("Mod has saves disabled.");
         }

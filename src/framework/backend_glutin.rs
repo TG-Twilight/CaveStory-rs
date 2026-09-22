@@ -14,7 +14,7 @@ use glutin::{Api, ContextBuilder, GlProfile, GlRequest, PossiblyCurrent, Windowe
 use imgui::{DrawCmdParams, DrawData, DrawIdx, DrawVert};
 use winit::window::Icon;
 
-use crate::common::Rect;
+use crate::common::{Rect, APP_DISPLAY_NAME};
 use crate::framework::backend::{Backend, BackendEventLoop, BackendRenderer, BackendTexture, SpriteBatchCommand, get_scaled_size};
 use crate::framework::context::Context;
 use crate::framework::error::GameResult;
@@ -83,7 +83,7 @@ impl GlutinEventLoop {
                 window = window.with_drag_and_drop(false);
             }
 
-            window = window.with_title("doukutsu-rs");
+            window = window.with_title(APP_DISPLAY_NAME);
             
             #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "android", target_os = "horizon")))]
             {
@@ -174,7 +174,7 @@ impl BackendEventLoop for GlutinEventLoop {
             let size = window.window().inner_size();
             let (width, height) = (size.width.max(1), size.height.max(1));
             ctx.real_screen_size = (width, height);
-            ctx.screen_size = get_scaled_size(&state, width, height);
+            ctx.screen_size = get_scaled_size(state_ref, width, height);
             state_ref.handle_resize(ctx).unwrap();
         }
 
@@ -183,12 +183,16 @@ impl BackendEventLoop for GlutinEventLoop {
             unsafe { (std::mem::transmute(game), std::mem::transmute(ctx)) };
 
         event_loop.run(move |event, _, control_flow| {
-            *control_flow = ControlFlow::Wait;
+            // Keep MainEventsCleared's interface deadline through RedrawEventsCleared.
+            if matches!(event, Event::NewEvents(_)) {
+                *control_flow = ControlFlow::Wait;
+            }
 
             match event {
                 Event::WindowEvent { event: WindowEvent::CloseRequested, window_id }
                     if window_id == window.window().id() =>
                 {
+                    ctx.stop_rumble_for_lifecycle();
                     state_ref.shutdown();
                 }
                 Event::Resumed => {
@@ -207,8 +211,11 @@ impl BackendEventLoop for GlutinEventLoop {
                     }
 
                     state_ref.sound_manager.resume();
+                    #[cfg(not(target_os = "android"))]
+                    window.window().request_redraw();
                 }
                 Event::Suspended => {
+                    ctx.stop_rumble_for_lifecycle();
                     {
                         let mut mutex = GAME_SUSPENDED.lock().unwrap();
                         *mutex = true;
@@ -221,6 +228,19 @@ impl BackendEventLoop for GlutinEventLoop {
 
                     state_ref.sound_manager.pause();
                 }
+                Event::WindowEvent { event: WindowEvent::Focused(focused), window_id }
+                    if window_id == window.window().id() && state_ref.settings.pause_on_focus_loss =>
+                {
+                    *GAME_SUSPENDED.lock().unwrap() = !focused;
+                    if focused {
+                        state_ref.sound_manager.resume();
+                        game.loops = 0;
+                        window.window().request_redraw();
+                    } else {
+                        ctx.stop_rumble_for_lifecycle();
+                        state_ref.sound_manager.pause();
+                    }
+                }
                 Event::WindowEvent { event: WindowEvent::Resized(size), window_id }
                     if window_id == window.window().id() =>
                 {
@@ -232,7 +252,7 @@ impl BackendEventLoop for GlutinEventLoop {
                         let (width, height) = (size.width.max(1), size.height.max(1));
 
                         ctx.real_screen_size = (width, height);
-                        ctx.screen_size = get_scaled_size(&state, width, height);
+                        ctx.screen_size = get_scaled_size(state_ref, width, height);
 
                         state_ref.handle_resize(ctx).unwrap();
                     }
@@ -240,10 +260,17 @@ impl BackendEventLoop for GlutinEventLoop {
                 Event::WindowEvent { event: WindowEvent::Touch(touch), window_id }
                     if window_id == window.window().id() =>
                 {
-                    let mut controls = &mut state_ref.touch_controls;
                     let scale = state_ref.scale as f64;
                     let loc_x = (touch.location.x * ctx.screen_size.0 as f64 / ctx.real_screen_size.0 as f64) / scale;
                     let loc_y = (touch.location.y * ctx.screen_size.1 as f64 / ctx.real_screen_size.1 as f64) / scale;
+                    if matches!(touch.phase, TouchPhase::Started | TouchPhase::Moved) {
+                        let moved = state_ref.touch_controls.points.iter().find(|p| p.id == touch.id)
+                            .map_or(true, |p| (p.position.0 - loc_x).abs() + (p.position.1 - loc_y).abs() >= 1.0);
+                        let effective = crate::input::prompts::touch_is_effective(state_ref.touch_controls.control_type,
+                            state_ref.canvas_size, crate::framework::graphics::screen_insets_scaled(ctx, state_ref.scale), (loc_x, loc_y));
+                        ctx.prompt_touch(state_ref.settings.touch_controls && moved && effective);
+                    }
+                    let mut controls = &mut state_ref.touch_controls;
 
                     match touch.phase {
                         TouchPhase::Started | TouchPhase::Moved => {
@@ -283,7 +310,7 @@ impl BackendEventLoop for GlutinEventLoop {
                                 ElementState::Released => false,
                             };
 
-                            ctx.keyboard_context.set_key(drs_scan, key_state);
+                            ctx.prompt_key(&state_ref.settings, drs_scan, key_state);
                         }
                     }
                 }
@@ -309,6 +336,7 @@ impl BackendEventLoop for GlutinEventLoop {
                 }
                 Event::MainEventsCleared => {
                     if state_ref.shutdown {
+                        ctx.stop_rumble_for_lifecycle();
                         log::info!("Shutting down...");
                         *control_flow = ControlFlow::Exit;
                         return;
@@ -317,6 +345,17 @@ impl BackendEventLoop for GlutinEventLoop {
                     {
                         let mutex = GAME_SUSPENDED.lock().unwrap();
                         if *mutex {
+                            #[cfg(trainer_interface)]
+                            if let Some(scene) = game.scene.as_mut() {
+                                use downcast::Downcast;
+                                if let Ok(scene) = Downcast::<crate::scene::game_scene::GameScene>::downcast_mut(scene.as_mut()) {
+                                    if scene.poll_trainer(state_ref, true) {
+                                        *control_flow = ControlFlow::WaitUntil(
+                                            std::time::Instant::now() + std::time::Duration::from_millis(16),
+                                        );
+                                    }
+                                }
+                            }
                             return;
                         }
                     }
@@ -351,6 +390,7 @@ impl BackendEventLoop for GlutinEventLoop {
                     }
 
                     if state_ref.next_scene.is_some() {
+                        ctx.stop_rumble_for_lifecycle();
                         mem::swap(&mut game.scene, &mut state_ref.next_scene);
                         state_ref.next_scene = None;
                         game.scene.as_mut().unwrap().init(state_ref, ctx).unwrap();

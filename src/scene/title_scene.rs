@@ -305,6 +305,14 @@ impl Scene for TitleScene {
     }
 
     fn tick(&mut self, state: &mut SharedGameState, ctx: &mut Context) -> GameResult {
+        #[cfg(target_os = "android")]
+        if self.tick % 30 == 0 && state.settings.load_android_language(ctx) {
+            state.update_locale(ctx);
+            let mut title = TitleScene::new();
+            if self.current_menu == CurrentMenu::OptionMenu { title.open_settings_menu()?; }
+            state.next_scene = Some(Box::new(title));
+            return Ok(());
+        }
         state.touch_controls.control_type = TouchControlType::None;
         self.background.tick()?;
         self.controller.update(state, ctx)?;

@@ -1,0 +1,31 @@
+{
+  "source": "CaveStory-rs Trainer",
+  "version": "0.1.0",
+  "protocol": 3,
+  "authority": "Trainer crates/ and integrations/; game owns engine hooks",
+  "files": {
+    "vendor/trainer/protocol/src/edits.rs": "f47f330e7222f04980c0bca2c4429019f3dc04a3a84b73c03459c615b64af11a",
+    "vendor/trainer/protocol/src/lib.rs": "b96a345a6275a4595bcc9e9a6fe557727405ec02b7089b26b41684ae954abe6c",
+    "vendor/trainer/protocol/Cargo.toml": "41a917c0b474cba8a99e21daee6be3133d60449a96f0c9047e364c82ef7955c4",
+    "vendor/trainer/protocol/LICENSE": "d07344d0ef85419a7c9c0f0e2bb77d0a69a2cbb82844049299357351bb0829d7",
+    "vendor/trainer/bridge/src/channel.rs": "da2b847b5db411c89a5e8152b40a88366e9015a6834a21cf6f286510357e490f",
+    "vendor/trainer/bridge/src/lib.rs": "fef190c9ff9b446d24bf5e28ed92264f39bbd44288e670dacba1eda3e8850483",
+    "vendor/trainer/bridge/src/mailbox.rs": "08727d1d3709c39ab1c2b136cd355a8b7e2cec7ebca314af0473e3d99792b475",
+    "vendor/trainer/bridge/Cargo.toml": "3a2e1346399ef3796937fc0b9b1fa6eed2890cab2dc79fa3ab24fd6e8ce16c65",
+    "vendor/trainer/bridge/LICENSE": "d07344d0ef85419a7c9c0f0e2bb77d0a69a2cbb82844049299357351bb0829d7",
+    "vendor/trainer/transport/src/lib.rs": "02216eaae4921e975b66e89f27631e91c40c79c61f8773c6e9c0e34881991f00",
+    "vendor/trainer/transport/src/windows.rs": "ba644d4ed403e44107ee6f8fdf56f3e5802532ac6945e7a99bfcacab09bf862b",
+    "vendor/trainer/transport/Cargo.toml": "5002e00de80d19c5c780163393d4b0b18d6cf91bc1ae1ec044c4f5a3fecd5234",
+    "vendor/trainer/transport/LICENSE": "d07344d0ef85419a7c9c0f0e2bb77d0a69a2cbb82844049299357351bb0829d7",
+    "src/trainer.rs": "ba05d1c197110899d4aac17c75c013f1255c85548e0cc34b629b629f93cd9817",
+    "src/trainer_platform.rs": "203db790cd6a6c18616c3ea1c6dc7b56dfe609d824f2f43742fd928fbd19ab4f",
+    "src/trainer_tests.rs": "0d05842a10d808b28d7ebcec6009873f2c7b48c2d982dcfae29daf0e86380490",
+    "src/trainer_android.rs": "309c3ef937ded3854f03769b6b35c017f50c3afff45adbcdd59fb352dc69f4ab",
+    "drsandroid/app/src/main/java/io/github/cavestory_rs/TrainerAccessActivity.java": "f874742cb0fce2bcfbf130a755daf04cf7a5ea737f65b2ce55a9bbd15d87ca88",
+    "drsandroid/app/src/main/java/io/github/cavestory_rs/TrainerBridge.java": "62c6dd97b9e6361a566d73567deea88e9e566b9fee7dcc3eebcdad5449e6a97c",
+    "drsandroid/app/src/main/java/io/github/cavestory_rs/TrainerService.java": "b8d4806098c394e9f40601238e4e0451df682140e7e45cb019ec7f4c34cd50bf",
+    "vendor/trainer/TRANSPORT.md": "90d9a64b73b1feef9308043f552d4300d7a594902741bfff42678893f7e80e52",
+    "vendor/trainer/notices/TRAINER-LICENSES.txt": "e3052696d61291d57d310ea30ee0f9cdcd14e5278f7c309a4b7226a42f2a3d33",
+    "vendor/trainer/interface-dependencies.json": "4f8923b3e2313e10e5b8987aaeea333a66729e0d6f417f0b00f85efeb5b72fdd"
+  }
+}

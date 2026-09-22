@@ -80,17 +80,17 @@ impl Replay {
     }
 
     fn write_replay(&mut self, state: &mut SharedGameState, ctx: &mut Context, replay_kind: ReplayKind) -> GameResult {
-        if let Ok(mut file) = filesystem::open_options(
+        let mut file = filesystem::open_options(
             ctx,
             [state.get_rec_filename(), replay_kind.get_suffix()].join(""),
-            OpenOptions::new().write(true).create(true),
-        ) {
-            file.write_u16::<LE>(0)?; // Space for versioning replay files
-            file.write_u64::<LE>(self.rng_seed)?;
-            for input in &self.keylist {
-                file.write_u16::<LE>(*input)?;
-            }
+            OpenOptions::new().write(true).create(true).truncate(true),
+        )?;
+        file.write_u16::<LE>(0)?; // Space for versioning replay files
+        file.write_u64::<LE>(self.rng_seed)?;
+        for input in &self.keylist {
+            file.write_u16::<LE>(*input)?;
         }
+        std::io::Write::flush(&mut file)?;
         Ok(())
     }
 

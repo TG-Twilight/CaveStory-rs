@@ -1,11 +1,10 @@
 name: Feature Request
-description: Suggest a new feature or improvement for doukutsu-rs
-type: "Feature"
+description: Suggest a new feature or improvement for CaveStory-rs
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for suggesting a feature! Please fill out this form to help us understand your idea and how it could improve doukutsu-rs.
+        Thanks for suggesting a feature! Please fill out this form to help us understand your idea and how it could improve CaveStory-rs.
 
   - type: textarea
     id: feature-description

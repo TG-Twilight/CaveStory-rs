@@ -1,8 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <permission android:name="io.github.cavestory_rs.permission.TRAINER"
+        android:protectionLevel="signature" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <queries>
+        <package android:name="io.github.cavestory_rs.trainer" />
+        <intent><action android:name="android.bluetooth.IBluetoothHidHost" /></intent>
+    </queries>
 
     <application
         android:allowBackup="true"
@@ -11,11 +23,19 @@
         android:icon="@mipmap/ic_launcher"
         android:isGame="true"
         android:label="@string/app_name"
+        android:localeConfig="@xml/locales_config"
         android:hardwareAccelerated="true"
         android:resizeableActivity="false"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Doukutsurs">
+
+        <service android:name="io.github.cavestory_rs.TrainerService"
+            android:exported="true" android:permission="io.github.cavestory_rs.permission.TRAINER" />
+        <activity android:name="io.github.cavestory_rs.TrainerAccessActivity"
+            android:exported="true" android:excludeFromRecents="true"
+            android:permission="io.github.cavestory_rs.permission.TRAINER"
+            android:theme="@android:style/Theme.Material.Light.Dialog.Alert" />
 
         <activity
             android:name=".MainActivity"
@@ -34,14 +54,25 @@
 
         <activity
             android:name=".DownloadActivity"
-            android:label="Download"
+            android:exported="false"
+            android:label="@string/download_title"
             android:screenOrientation="sensorLandscape"
             android:theme="@style/Theme.Doukutsurs.NoActionBar" />
 
         <activity
+            android:name=".StorageActivity"
+            android:exported="false"
+            android:label="@string/storage_title"
+            android:screenOrientation="sensorLandscape"
+            android:theme="@style/Theme.Doukutsurs.NoActionBar" />
+
+        <activity android:name=".SaveMigrationActivity" android:exported="false"
+            android:screenOrientation="sensorLandscape" android:theme="@style/Theme.Doukutsurs.NoActionBar" />
+
+        <activity
             android:name=".GameActivity"
-            android:configChanges="orientation|keyboardHidden|screenSize"
-            android:exported="true"
+            android:configChanges="orientation|keyboard|keyboardHidden|navigation|screenSize|locale|layoutDirection"
+            android:exported="false"
             android:launchMode="standard"
             android:resizeableActivity="false"
             android:screenOrientation="sensorLandscape">
@@ -49,6 +80,13 @@
                 android:name="android.app.lib_name"
                 android:value="drsandroid" />
         </activity>
+
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <provider
             android:name=".DoukutsuDocumentsProvider"

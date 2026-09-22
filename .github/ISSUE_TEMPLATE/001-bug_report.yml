@@ -1,6 +1,5 @@
 name: Bug Report
-description: Report a bug or issue with doukutsu-rs
-type: "Bug"
+description: Report a bug or issue with CaveStory-rs
 body:
   - type: markdown
     attributes:
@@ -42,7 +41,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: What **exact** version of doukutsu-rs are you using? For example, "0.102.0-beta7", "0.102.0-733" - you can find it at bottom of the main menu
+      description: What **exact** version of CaveStory-rs are you using? For example, "20260922" - you can find it at bottom of the main menu
       placeholder: x.xxx.x-xxx
     validations:
       required: true

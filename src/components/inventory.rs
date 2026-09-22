@@ -11,6 +11,7 @@ use crate::input::touch_controls::TouchControlType;
 use crate::game::player::Player;
 use crate::game::scripting::tsc::text_script::{ScriptMode, TextScriptExecutionState};
 use crate::game::weapon::{WeaponLevel, WeaponType};
+use crate::graphics::font::Font;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[repr(u8)]
@@ -316,9 +317,16 @@ impl GameEntity<(&mut Context, &mut Player, &mut Inventory, &mut HUD)> for Inven
             batch.add_rect(x, y + i as f32 * 8.0, rect);
         }
 
-        batch.add_rect(x + 12.0, y + self.text_y_pos as f32, &state.constants.textscript.inventory_text_arms);
-
-        batch.add_rect(x + 12.0, y + 52.0 + self.text_y_pos as f32, &state.constants.textscript.inventory_text_item);
+        // Locales can replace image lettering without modifying the game's sprite sheet.
+        let weapons_label = state.loc.t_optional("game.inventory.weapons").filter(|text| !text.trim().is_empty());
+        let items_label = state.loc.t_optional("game.inventory.items").filter(|text| !text.trim().is_empty());
+        let level_label = state.loc.t_optional("game.hud.level").filter(|text| !text.trim().is_empty());
+        if weapons_label.is_none() {
+            batch.add_rect(x + 12.0, y + self.text_y_pos as f32, &state.constants.textscript.inventory_text_arms);
+        }
+        if items_label.is_none() {
+            batch.add_rect(x + 12.0, y + 52.0 + self.text_y_pos as f32, &state.constants.textscript.inventory_text_item);
+        }
 
         let (item_cursor_frame, weapon_cursor_frame) = match self.focus {
             InventoryFocus::None => (1, 1),
@@ -345,7 +353,9 @@ impl GameEntity<(&mut Context, &mut Player, &mut Inventory, &mut HUD)> for Inven
             }
 
             // lv
-            batch.add_rect(x + 12.0 + idx as f32 * 40.0, y + 32.0, &Rect::new_size(80, 80, 16, 8));
+            if level_label.is_none() {
+                batch.add_rect(x + 12.0 + idx as f32 * 40.0, y + 32.0, &Rect::new_size(80, 80, 16, 8));
+            }
             // per
             batch.add_rect(x + 12.0 + idx as f32 * 40.0, y + 48.0, &Rect::new_size(72, 48, 8, 8));
 
@@ -356,6 +366,29 @@ impl GameEntity<(&mut Context, &mut Player, &mut Inventory, &mut HUD)> for Inven
         }
 
         batch.draw(ctx)?;
+
+        // Bottom-align taller fonts to the original 8px headers, above the icon rows.
+        if let Some(text) = level_label {
+            for (idx, weapon) in self.weapon_data.iter().enumerate() {
+                if weapon.wtype == WeaponType::None {
+                    break;
+                }
+                // The ammo digits are in the right half of each slot, clear of this label.
+                state.font.builder().position(x + 12.0 + idx as f32 * 40.0, y + 32.0).center(16.0)
+                    .draw(text, ctx, &state.constants, &mut state.texture_set)?;
+            }
+        }
+        let label_y = y + self.text_y_pos as f32 - (state.font.line_height() - 8.0).max(0.0);
+        for (label, offset) in [(weapons_label, 0.0), (items_label, 52.0)] {
+            if let Some(text) = label {
+                state.font.builder().position(x + 12.0, label_y + offset).draw(
+                    text,
+                    ctx,
+                    &state.constants,
+                    &mut state.texture_set,
+                )?;
+            }
+        }
 
         let batch = state.texture_set.get_or_load_batch(ctx, &state.constants, "ArmsImage")?;
         for (idx, weapon) in self.weapon_data.iter().enumerate() {

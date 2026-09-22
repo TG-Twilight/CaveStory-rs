@@ -20,7 +20,7 @@ fn main() {
 
         if let Err(e) = result {
             let title = OsStr::new("Error!").encode_wide().chain(Some(0)).collect::<Vec<u16>>();
-            let message = OsStr::new(format!("Whoops, doukutsu-rs crashed: {}", e).as_str())
+            let message = OsStr::new(format!("Whoops, {} crashed: {}", doukutsu_rs::common::APP_DISPLAY_NAME, e).as_str())
                 .encode_wide()
                 .chain(Some(0))
                 .collect::<Vec<u16>>();

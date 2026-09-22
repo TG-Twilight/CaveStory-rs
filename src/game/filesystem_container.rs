@@ -98,9 +98,13 @@ impl FilesystemContainer {
             log::info!("Android data directories: data_path={:?} user_path={:?}", &data_path, &user_path);
 
             mount_vfs(context, Box::new(PhysicalFS::new(&data_path, true)));
-            mount_user_vfs(context, Box::new(PhysicalFS::new(&user_path, false)));
-
-            self.user_path = user_path.clone();
+            if crate::framework::android_storage::enabled()? {
+                mount_user_vfs(context, Box::new(crate::framework::android_storage::PublicSaves::new(&user_path)));
+                self.user_path = PathBuf::from("android-public-saves");
+            } else {
+                mount_user_vfs(context, Box::new(PhysicalFS::new(&user_path, false)));
+                self.user_path = user_path.clone();
+            }
             self.game_path = data_path.clone();
         }
         #[cfg(target_os = "horizon")]
@@ -146,11 +150,34 @@ impl FilesystemContainer {
         log::info!("Mounting built-in FS");
         mount_vfs(context, Box::new(BuiltinFS::new()));
 
+        for (code, marker) in crate::i18n::MANAGED_LANGUAGE_PACKS {
+            if let Err(error) = crate::data::vanilla::VanillaExtractor::extract_language_pack(&self.game_path, code, marker) {
+                // The optional pack must not prevent the intact base game starting.
+                // Until stage.sect is published, locale loading excludes this pack.
+                log::error!("{} resource extraction failed; keeping base resources: {}", code, error);
+            }
+        }
+
         Ok(())
     }
 
     pub fn open_user_directory(&self) -> GameResult {
         self.open_directory(self.user_path.clone())
+    }
+
+    #[cfg(target_os = "android")]
+    pub fn refresh_android_saves(&mut self, context: &mut Context) -> GameResult {
+        let private = self.game_path.parent().unwrap().join("saves");
+        let public = crate::framework::android_storage::enabled()?;
+        unmount_user_vfs(context, &self.user_path);
+        if public {
+            mount_user_vfs(context, Box::new(crate::framework::android_storage::PublicSaves::new(&private)));
+            self.user_path = PathBuf::from("android-public-saves");
+        } else {
+            mount_user_vfs(context, Box::new(PhysicalFS::new(&private, false)));
+            self.user_path = private;
+        }
+        Ok(())
     }
 
     pub fn open_game_directory(&self) -> GameResult {

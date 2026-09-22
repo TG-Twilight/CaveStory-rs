@@ -31,6 +31,7 @@ impl TouchPoint {
 }
 
 pub struct TouchControls {
+    pub visibility: super::touch_visibility::TouchVisibility,
     pub control_type: TouchControlType,
     pub points: Vec<TouchPoint>,
     pub interact_icon: bool,
@@ -41,6 +42,7 @@ pub struct TouchControls {
 impl TouchControls {
     pub fn new() -> TouchControls {
         TouchControls {
+            visibility: super::touch_visibility::TouchVisibility::default(),
             control_type: TouchControlType::None,
             points: Vec::with_capacity(8),
             interact_icon: false,

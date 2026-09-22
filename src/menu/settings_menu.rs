@@ -139,7 +139,7 @@ enum LinksMenuEntry {
 
 impl Default for LinksMenuEntry {
     fn default() -> Self {
-        LinksMenuEntry::Link(DISCORD_LINK)
+        LinksMenuEntry::Link(TRIBUTE_LINK)
     }
 }
 
@@ -148,6 +148,8 @@ enum AdvancedMenuEntry {
     Title,
     OpenUserData,
     OpenGameData,
+    #[cfg(target_os = "android")]
+    SaveLocation,
     #[cfg(not(any(target_os = "android", target_os = "horizon")))]
     MakePortable,
     Back,
@@ -188,15 +190,15 @@ pub struct SettingsMenu {
     portable: Menu<PortableMenuEntry>,
     controls_menu: ControlsMenu,
     pub on_title: bool,
+    #[cfg(target_os = "android")]
+    migrating_saves: bool,
 }
 
-static DISCORD_LINK: &str = "https://discord.gg/fbRsNNB";
-static GITHUB_LINK: &str = "https://github.com/doukutsu-rs/doukutsu-rs";
-static DOCS_LINK: &str = "https://doukutsu-rs.gitbook.io/docs/";
-static TRIBUTE_LINK: &str = "https://www.cavestory.org/";
-static GENERAL_LINK: &str = "https://discord.gg/cavestory";
-static MODDING_LINK: &str = "https://discord.gg/xRsWpz6";
+static GITHUB_LINK: &str = "https://github.com/TG-Twilight/CaveStory-rs";
+static TRIBUTE_LINK: &str = "https://www.cavestory.one/";
 static GETPLUS_LINK: &str = "https://www.nicalis.com/games/cavestory+";
+static PIXEL_SHOP_LINK: &str = "https://oxizn.booth.pm/";
+static STUDIO_PIXEL_LINK: &str = "https://studiopixel.jp/";
 
 impl SettingsMenu {
     pub fn new() -> SettingsMenu {
@@ -225,6 +227,8 @@ impl SettingsMenu {
             controls_menu,
             portable,
             on_title: false,
+            #[cfg(target_os = "android")]
+            migrating_saves: false,
         }
     }
 
@@ -446,17 +450,17 @@ impl SettingsMenu {
 
         self.links
             .push_entry(LinksMenuEntry::Title, MenuEntry::Disabled(state.loc.t("menus.options_menu.links").to_owned()));
-        self.links.push_entry(LinksMenuEntry::Link(DISCORD_LINK), MenuEntry::Active("doukutsu-rs Discord".to_owned()));
-        self.links.push_entry(LinksMenuEntry::Link(GITHUB_LINK), MenuEntry::Active("doukutsu-rs GitHub".to_owned()));
-        self.links.push_entry(LinksMenuEntry::Link(DOCS_LINK), MenuEntry::Active("doukutsu-rs Docs".to_owned()));
-        self.links
-            .push_entry(LinksMenuEntry::Link(TRIBUTE_LINK), MenuEntry::Active("Cave Story Tribute Website".to_owned()));
-        self.links.push_entry(LinksMenuEntry::Link(GENERAL_LINK), MenuEntry::Active("Cave Story Discord".to_owned()));
-        self.links.push_entry(
-            LinksMenuEntry::Link(MODDING_LINK),
-            MenuEntry::Active("Cave Story Modding Community".to_owned()),
-        );
-        self.links.push_entry(LinksMenuEntry::Link(GETPLUS_LINK), MenuEntry::Active("Get Cave Story+".to_owned()));
+        for (url, key, fallback) in [
+            (TRIBUTE_LINK, "tribute", "Cave Story Tribute Website"),
+            (GITHUB_LINK, "github", "CaveStory-rs GitHub"),
+            (GETPLUS_LINK, "get_plus", "Get Cave Story+"),
+            (PIXEL_SHOP_LINK, "pixel_shop", "Pixel's Shop (Shop Pi)"),
+            (STUDIO_PIXEL_LINK, "studio_pixel", "Studio Pixel Website"),
+        ] {
+            let key = format!("menus.options_menu.links_menu.{}", key);
+            let label = state.loc.t_optional(&key).filter(|text| !text.trim().is_empty()).unwrap_or(fallback);
+            self.links.push_entry(LinksMenuEntry::Link(url), MenuEntry::Active(label.to_owned()));
+        }
 
         #[cfg(not(any(target_os = "horizon")))]
         self.main.push_entry(
@@ -476,6 +480,14 @@ impl SettingsMenu {
             AdvancedMenuEntry::OpenGameData,
             MenuEntry::Active(state.loc.t("menus.options_menu.advanced_menu.open_game_data").to_owned()),
         );
+
+        #[cfg(target_os = "android")]
+        self.advanced.push_entry(AdvancedMenuEntry::SaveLocation, MenuEntry::Active(
+            match state.settings.locale.as_str() {
+                "zh-Hans" => "存档位置",
+                "jp" => "セーブの保存先",
+                _ => "Save folder",
+            }.to_owned()));
 
         #[cfg(not(any(target_os = "android", target_os = "horizon")))]
         if let Some(fs_container) = &state.fs_container {
@@ -725,6 +737,20 @@ impl SettingsMenu {
         state: &mut SharedGameState,
         ctx: &mut Context,
     ) -> GameResult {
+        #[cfg(target_os = "android")]
+        if self.migrating_saves {
+            let result = crate::framework::android_storage::migration_result()?;
+            if result < 0 { return Ok(()); }
+            self.migrating_saves = false;
+            controller.update(state, ctx)?;
+            controller.update_trigger();
+            if result > 0 {
+                if let Some(fs) = &mut state.fs_container { fs.refresh_android_saves(ctx)?; }
+                state.mod_requirements = crate::mod_requirements::ModRequirements::load(ctx)?;
+                state.next_scene = Some(Box::new(TitleScene::new()));
+            }
+            return Ok(());
+        }
         self.update_sizes(state);
 
         match self.current {
@@ -984,7 +1010,9 @@ impl SettingsMenu {
             CurrentMenu::LanguageMenu => match self.language.tick(controller, state) {
                 MenuSelectionResult::Selected(LanguageMenuEntry::Language(new_locale), entry) => {
                     if let MenuEntry::Active(_) = entry {
+                        state.settings.follow_system_language = false;
                         if new_locale == state.settings.locale {
+                            let _ = state.settings.save(ctx);
                             self.current = CurrentMenu::MainMenu;
                         } else {
                             state.settings.locale = new_locale;
@@ -1138,6 +1166,11 @@ impl SettingsMenu {
                 _ => (),
             },
             CurrentMenu::AdvancedMenu => match self.advanced.tick(controller, state) {
+                #[cfg(target_os = "android")]
+                MenuSelectionResult::Selected(AdvancedMenuEntry::SaveLocation, _) => {
+                    crate::framework::android_storage::open_migration(self.on_title)?;
+                    self.migrating_saves = self.on_title;
+                }
                 MenuSelectionResult::Selected(AdvancedMenuEntry::OpenUserData, _) => {
                     if let Some(fs_container) = &state.fs_container {
                         fs_container.open_user_directory()?;

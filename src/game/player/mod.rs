@@ -78,6 +78,11 @@ impl DogStack {
 
 #[derive(Clone)]
 pub struct Player {
+    #[cfg(trainer_interface)]
+    pub trainer_effects: trainer_protocol::Effects,
+    #[cfg(trainer_interface)]
+    pub trainer_jump_active: bool,
+    pub feedback: crate::game::rumble::PlayerFeedback,
     pub x: i32,
     pub y: i32,
     pub vel_x: i32,
@@ -132,6 +137,11 @@ impl Player {
         let skin = Box::new(BasicPlayerSkin::new("MyChar".to_string(), state, ctx));
 
         Player {
+            #[cfg(trainer_interface)]
+            trainer_effects: Default::default(),
+            #[cfg(trainer_interface)]
+            trainer_jump_active: false,
+            feedback: crate::game::rumble::PlayerFeedback::default(),
             x: 0,
             y: 0,
             vel_x: 0,
@@ -232,6 +242,9 @@ impl Player {
         } else {
             state.constants.player.air_physics
         };
+
+        #[cfg(trainer_interface)]
+        let physics = crate::trainer::physics(physics, &self.trainer_effects);
 
         self.question = false;
 
@@ -392,6 +405,10 @@ impl Player {
             }
         }
 
+        #[cfg(trainer_interface)]
+        if self.flags.hit_bottom_wall() || self.flags.hit_right_slope() || self.flags.hit_left_slope() {
+            self.trainer_jump_active = false;
+        }
         // jumping
         if state.control_flags.control_enabled() {
             self.up = self.controller.move_up() || self.strafe_up;
@@ -402,6 +419,8 @@ impl Player {
                 && !self.flags.force_up()
             {
                 self.vel_y = -physics.jump;
+                #[cfg(trainer_interface)]
+                { self.trainer_jump_active = self.trainer_effects.jump_percent > 100; }
                 state.sound_manager.play_sfx(15);
             }
         }
@@ -549,8 +568,21 @@ impl Player {
             state.constants.player.air_physics.max_move
         };
 
-        self.vel_x = self.vel_x.clamp(-max_move, max_move);
-        self.vel_y = self.vel_y.clamp(-max_move, max_move);
+        #[cfg(trainer_interface)]
+        let max_horizontal = crate::trainer::scaled(max_move, self.trainer_effects.movement_percent);
+        #[cfg(not(trainer_interface))]
+        let max_horizontal = max_move;
+        #[cfg(trainer_interface)]
+        let max_up = {
+            if self.booster_switch != BoosterSwitch::None || self.vel_y >= 0
+                || !state.control_flags.control_enabled() || self.flags.force_up() || self.flags.force_down()
+                || self.flags.force_left() || self.flags.force_right() { self.trainer_jump_active = false; }
+            if self.trainer_jump_active { crate::trainer::scaled(max_move, self.trainer_effects.jump_percent) } else { max_move }
+        };
+        #[cfg(not(trainer_interface))]
+        let max_up = max_move;
+        self.vel_x = self.vel_x.clamp(-max_horizontal, max_horizontal);
+        self.vel_y = self.vel_y.clamp(-max_up, max_move);
 
         if !self.splash && self.flags.in_water() {
             let vertical_splash = !self.flags.hit_bottom_wall() && self.vel_y > 0x200;
@@ -874,6 +906,10 @@ impl Player {
             return;
         }
 
+        let final_hp = state.get_damage(hp);
+        #[cfg(trainer_interface)]
+        let final_hp = crate::trainer::incoming_damage(final_hp, &self.trainer_effects);
+        if final_hp <= 0 { return; }
         state.sound_manager.play_sfx(16);
         self.shock_counter = 128;
         self.cond.set_interacted(false);
@@ -881,8 +917,6 @@ impl Player {
         if self.control_mode == ControlMode::Normal {
             self.vel_y = -0x400; // -2.0fix9
         }
-
-        let final_hp = state.get_damage(hp);
 
         self.life = self.life.saturating_sub(final_hp as u16);
 
@@ -892,7 +926,9 @@ impl Player {
 
         let rumble_intensity =
             (0x4000 + ((1.0 - (self.life as f32 / self.max_life as f32)) * 0x2000 as f32) as i32).min(0xFFFF) as u16;
-        self.controller.set_rumble(rumble_intensity, rumble_intensity, 20);
+        self.feedback.request(crate::game::rumble::RumbleEffect::original(
+            rumble_intensity, rumble_intensity, 20, state.settings.timing_mode.get_tps() as u32,
+        ));
 
         self.damage = self.damage.saturating_add(final_hp as u16);
         self.damage_popup.add_value(-(self.damage as i16));

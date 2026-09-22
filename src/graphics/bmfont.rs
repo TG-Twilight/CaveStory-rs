@@ -224,7 +224,28 @@ impl Font for BMFont {
     }
 }
 
+enum LineItem<'a> {
+    Glyph(&'a BMChar),
+    Symbol(&'a Rect<u16>),
+}
+
 impl BMFont {
+    fn layout_line<'a>(&'a self, text: &mut dyn Iterator<Item = char>, symbols: &'a Symbols, scale: f32)
+        -> Vec<(f32, LineItem<'a>)> {
+        let mut result = Vec::new();
+        let mut offset = 0.0;
+        for chr in text {
+            if let Some((_, rect)) = symbols.symbols.iter().find(|(c, _)| *c == chr) {
+                result.push((offset, LineItem::Symbol(rect)));
+                offset += rect.width() as f32 * scale;
+            } else if let Some(glyph) = self.font.chars.get(&chr) {
+                result.push((offset, LineItem::Glyph(glyph)));
+                offset += glyph.x_advance as f32 * self.font_scale * scale;
+            }
+        }
+        result
+    }
+
     pub fn load(roots: &Vec<String>, desc_path: &str, ctx: &mut Context, font_scale: f32) -> GameResult<BMFont> {
         let full_path = PathBuf::from(desc_path);
         let desc_stem =
@@ -267,109 +288,43 @@ impl BMFont {
         symbols: Option<&Symbols>,
         ctx: &mut Context,
     ) -> GameResult {
-        unsafe {
-            static mut RECTS_BUF: Vec<(f32, f32, *const Rect<u16>)> = Vec::new();
+        let syms = symbols.unwrap_or(&EMPTY_SYMBOLS);
+        // Resolve once, independent of font atlas pages. Symbols need no font glyph.
+        let layout = self.layout_line(iter, syms, scale);
+        let pages: HashSet<u8> = layout.iter().filter_map(|(_, item)| match item {
+            LineItem::Glyph(glyph) => Some(glyph.page),
+            LineItem::Symbol(_) => None,
+        }).collect();
 
-            let syms = symbols.unwrap_or(&EMPTY_SYMBOLS);
-            RECTS_BUF.clear();
-
-            if self.pages.len() == 1 {
-                let batch = texture_set.get_or_load_batch(ctx, constants, self.pages.get(0).unwrap())?;
-                let mut offset_x = x;
-
-                for chr in iter {
-                    if let Some(glyph) = self.font.chars.get(&chr) {
-                        let rect_map_entry = syms.symbols.iter().find(|(c, _)| *c == chr);
-
-                        if let Some((_, rect)) = rect_map_entry {
-                            RECTS_BUF.push((
-                                offset_x,
-                                y + self.line_height() / 2.0 - rect.height() as f32 / 2.0,
-                                rect as *const _,
-                            ));
-                            offset_x += rect.width() as f32;
-                        } else {
-                            batch.add_rect_scaled_tinted(
-                                offset_x + (glyph.x_offset as f32 * self.font_scale),
-                                y + (glyph.y_offset as f32 * self.font_scale),
-                                color,
-                                self.font_scale * scale,
-                                self.font_scale * scale,
-                                &Rect::new_size(
-                                    glyph.x as u16,
-                                    glyph.y as u16,
-                                    glyph.width as u16,
-                                    glyph.height as u16,
-                                ),
-                            );
-
-                            offset_x += glyph.x_advance as f32 * self.font_scale * scale;
-                        }
+        for page in pages {
+            let Some(page_tex) = self.pages.get(page as usize) else { continue; };
+            let batch = texture_set.get_or_load_batch(ctx, constants, page_tex)?;
+            for (offset, item) in &layout {
+                if let LineItem::Glyph(glyph) = item {
+                    if glyph.page == page {
+                        batch.add_rect_scaled_tinted(
+                            x + offset + glyph.x_offset as f32 * self.font_scale,
+                            y + glyph.y_offset as f32 * self.font_scale,
+                            color, self.font_scale * scale, self.font_scale * scale,
+                            &Rect::new_size(glyph.x, glyph.y, glyph.width, glyph.height),
+                        );
                     }
-                }
-
-                batch.draw(ctx)?;
-            } else {
-                let mut pages = HashSet::new();
-                let mut chars = Vec::new();
-
-                for chr in iter {
-                    if let Some(glyph) = self.font.chars.get(&chr) {
-                        pages.insert(glyph.page);
-                        chars.push((chr, glyph));
-                    }
-                }
-
-                for page in pages {
-                    let page_tex = if let Some(p) = self.pages.get(page as usize) {
-                        p
-                    } else {
-                        continue;
-                    };
-
-                    let batch = texture_set.get_or_load_batch(ctx, constants, page_tex)?;
-                    let mut offset_x = x;
-
-                    for (chr, glyph) in chars.iter() {
-                        let rect_map_entry = syms.symbols.iter().find(|(c, _)| *c == *chr);
-
-                        if let Some((_, rect)) = rect_map_entry {
-                            RECTS_BUF.push((offset_x, y + self.line_height() / 2.0 - rect.height() as f32 / 2.0, rect));
-                            offset_x += rect.width() as f32;
-                        } else {
-                            if glyph.page == page {
-                                batch.add_rect_scaled_tinted(
-                                    offset_x + (glyph.x_offset as f32 * self.font_scale),
-                                    y + (glyph.y_offset as f32 * self.font_scale),
-                                    color,
-                                    self.font_scale * scale,
-                                    self.font_scale * scale,
-                                    &Rect::new_size(
-                                        glyph.x as u16,
-                                        glyph.y as u16,
-                                        glyph.width as u16,
-                                        glyph.height as u16,
-                                    ),
-                                );
-                            }
-
-                            offset_x += scale * (glyph.x_advance as f32 * self.font_scale);
-                        }
-                    }
-
-                    batch.draw(ctx)?;
                 }
             }
+            batch.draw(ctx)?;
+        }
 
-            if !RECTS_BUF.is_empty() && !syms.texture.is_empty() {
-                let sprite_batch = texture_set.get_or_load_batch(ctx, constants, syms.texture)?;
-
-                for &(x, y, rect) in RECTS_BUF.iter() {
-                    sprite_batch.add_rect_scaled(x, y, scale, scale, &*rect);
+        if !syms.texture.is_empty() && layout.iter().any(|(_, item)| matches!(item, LineItem::Symbol(_))) {
+            let batch = texture_set.get_or_load_batch(ctx, constants, syms.texture)?;
+            for (offset, item) in &layout {
+                if let LineItem::Symbol(rect) = item {
+                    batch.add_rect_scaled_tinted(
+                        x + offset, y + (self.line_height() - rect.height() as f32) * scale / 2.0,
+                        color, scale, scale, rect,
+                    );
                 }
-
-                sprite_batch.draw(ctx)?;
             }
+            batch.draw(ctx)?;
         }
 
         Ok(())
@@ -381,5 +336,35 @@ impl BMFont {
 
     pub fn get_scale(&self) -> f32 {
         self.font_scale
+    }
+}
+
+#[cfg(test)]
+mod symbol_layout_tests {
+    use super::*;
+    #[test]
+    fn symbols_without_font_glyphs_preserve_scaled_positions_across_pages() {
+        let glyph = |page| BMChar { x: 0, y: 0, width: 8, height: 10, x_offset: 0,
+            y_offset: 0, x_advance: 8, page, channel: 0 };
+        let font = BMFont { font: BMFontMetadata { pages: 2, font_size: 10, line_height: 10,
+            base: 0, chars: [('A', glyph(0)), ('B', glyph(1))].into_iter().collect() },
+            font_scale: 1.0, pages: vec!["a".into(), "b".into()] };
+        let symbols = Symbols { symbols: &[('\u{e000}', Rect::new_size(0, 0, 16, 16))], texture: "buttons" };
+        let layout = font.layout_line(&mut "A\u{e000}B".chars(), &symbols, 2.0);
+        assert_eq!(layout.len(), 3);
+        assert_eq!(layout.iter().map(|(x, _)| *x).collect::<Vec<_>>(), vec![0.0, 16.0, 48.0]);
+        assert_eq!(layout.iter().filter(|(_, item)| matches!(item, LineItem::Symbol(_))).count(), 1);
+        assert_eq!(font.compute_width(&mut "A\u{e000}B".chars(), Some(&symbols)), 32.0);
+        let only_symbol = font.layout_line(&mut "\u{e000}".chars(), &symbols, 1.0);
+        assert_eq!(only_symbol.len(), 1);
+        assert!(matches!(only_symbol[0].1, LineItem::Symbol(_)));
+        let plain = font.layout_line(&mut "AB".chars(), &EMPTY_SYMBOLS, 2.0);
+        assert_eq!(plain.iter().map(|(x, _)| *x).collect::<Vec<_>>(), vec![0.0, 16.0]);
+        let override_glyph = Symbols { symbols: &[('A', Rect::new_size(0, 0, 16, 16)),
+            ('\u{e001}', Rect::new_size(0, 0, 24, 16))], texture: "buttons" };
+        let mixed = font.layout_line(&mut "A\u{e001}B".chars(), &override_glyph, 1.0);
+        assert_eq!(mixed.iter().map(|(x, _)| *x).collect::<Vec<_>>(), vec![0.0, 16.0, 40.0]);
+        assert_eq!(mixed.iter().filter(|(_, item)| matches!(item, LineItem::Symbol(_))).count(), 2);
+
     }
 }

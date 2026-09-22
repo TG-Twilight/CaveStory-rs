@@ -1,0 +1,16 @@
+<resources>
+    <string name="distribution_question">CaveStory-rs をどこで入手しましたか？</string>
+    <string name="distribution_source_project">CaveStory-rs の GitHub リポジトリ／公式サイト</string>
+    <string name="distribution_source_gated">無料だが入手条件のある他の配布経路</string>
+    <string name="distribution_source_paid">淘宝・閑魚などで購入したダウンロードリンク</string>
+    <string name="distribution_title">CaveStory-rs は無料で公開されています</string>
+    <string name="distribution_project_message">正しい配布元です。このプロジェクトは GitHub で無料公開されています。購入、フォロー、グループへの参加、投稿の共有、広告視聴は不要です。友達にもプロジェクトのリンクを教えてください。</string>
+    <string name="distribution_gated_message">このプロジェクトは直接、無料でダウンロードできます。フォロー、グループへの参加、投稿の共有、広告視聴などの条件を満たす必要はありません。無料のプロジェクトを第三者が集客に利用している場合は、下記の配布元から直接入手してください。</string>
+    <string name="distribution_paid_message">この移植プロジェクトは GitHub で無料公開されており、ダウンロードリンクを購入する必要はありません。本リソースを購入した場合は、商品説明、会話、支払いの記録を保存し、取引サイトに出品者を通報して返金を求め、法令に基づく損害賠償も請求してください。追加で支払わないでください。無料の配布元は下記のリンクです。</string>
+    <string name="distribution_signature_title">署名が一致しないため起動できません</string>
+    <string name="distribution_signature_message">この APK の署名は CaveStory-rs の正式な配布証明書と一致しないか、検証できません。改変して再販売された可能性があり、安全上のリスクがあるため、ゲームを起動できません。\n\n本リソースを購入した場合は、商品説明、会話、支払いの記録を保存し、取引サイトに出品者を通報して返金を求め、法令に基づく損害賠償も請求してください。\n\nプロジェクトの配布元から無料版を入手してください。既存のセーブデータと設定は削除されていません。</string>
+    <string name="distribution_project">プロジェクトを開く</string>
+    <string name="distribution_continue">確認して続ける</string>
+    <string name="distribution_back">選び直す</string>
+    <string name="distribution_no_browser">ブラウザが見つかりません。配布元：</string>
+</resources>

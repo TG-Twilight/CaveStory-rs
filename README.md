@@ -1,253 +1,263 @@
-![doukutsu-rs](./res/sue_crab_banner_github.png)
+<p align="center">
+  <img src="res/readme/hero.png" alt="CaveStory-rs" width="100%">
+</p>
 
-A reimplementation of the Cave Story (Doukutsu Monogatari) engine with many quality-of-life
-improvements. It lets you enjoy the 2004 indie classic like a modern game, with support for the
-original freeware, Cave Story+, and Nintendo Switch data files.
+<p align="center">
+  <strong>Back to the caves. On your terms.</strong><br>
+  Three languages. Your controller. Windows &amp; Android.
+</p>
 
-[Join the Discord server](https://discord.gg/fbRsNNB)
+<p align="center">
+  <a href="README.md">English</a> · <a href="docs/README_zh-CN.md">简体中文</a> · <a href="docs/README_ja-JP.md">日本語</a>
+</p>
 
-[![CI](https://github.com/doukutsu-rs/doukutsu-rs/actions/workflows/ci.yml/badge.svg?branch=master)](https://nightly.link/doukutsu-rs/doukutsu-rs/workflows/ci/master?preview)
+<p align="center">
+  <img src="res/readme/rust.svg" alt="Rust" height="24">
+  <img src="res/readme/windows.svg" alt="Windows" height="24">
+  <img src="res/readme/android.svg" alt="Android" height="24">
+  <a href="LICENSE"><img src="res/readme/license.svg" alt="Engine license: MIT" height="24"></a>
+</p>
 
-- Get stable/beta builds from
-  - [get.doukutsu.rs](https://get.doukutsu.rs)
-  - [GitHub Releases](https://github.com/doukutsu-rs/doukutsu-rs/releases)
-  - [Flatpak](https://flathub.org/apps/io.github.doukutsu_rs.doukutsu-rs) (Linux only)
+<p align="center">
+  <a href="#features">Features</a> · <a href="#screenshots">Screenshots</a> · <a href="#play">Play</a> · <a href="#build">Build</a> · <a href="#credits">Credits</a>
+</p>
 
-- Get nightly builds (has latest fixes and improvements) from
-  - [get.doukutsu.rs](https://get.doukutsu.rs)
-  - [nightly.link](https://nightly.link/doukutsu-rs/doukutsu-rs/workflows/ci/master?preview)
+CaveStory-rs is a community fork of [doukutsu-rs](https://github.com/doukutsu-rs/doukutsu-rs), a Cave Story engine reimplementation written in Rust. It brings together Simplified Chinese, English, and Japanese game resources with improvements to controllers, Android setup, and save management. Current builds focus on Windows and Android and the original 2004 freeware game.
 
-  Permalinks to latest builds from `master` branch:
+<a id="features"></a>
 
-  - [Windows (64-bit)](https://nightly.link/doukutsu-rs/doukutsu-rs/workflows/ci/master/doukutsu-rs_windows-x64.zip)
-  - [Windows (32-bit)](https://nightly.link/doukutsu-rs/doukutsu-rs/workflows/ci/master/doukutsu-rs_windows-x32.zip)
-  - [macOS (Intel, 64-bit, 10.14+)](https://nightly.link/doukutsu-rs/doukutsu-rs/workflows/ci/master/doukutsu-rs_mac-x64.zip)
-  - [macOS (Apple M1, 11.0+)](https://nightly.link/doukutsu-rs/doukutsu-rs/workflows/ci/master/doukutsu-rs_mac-arm64.zip)
-  - [Linux (64-bit)](https://nightly.link/doukutsu-rs/doukutsu-rs/workflows/ci/master/doukutsu-rs_linux-x64.zip)
-  - [Android (armv7/arm64/x86)](https://nightly.link/doukutsu-rs/doukutsu-rs/workflows/ci/master/doukutsu-rs_android.zip)
+## Made for the way you play
 
-> [!NOTE]
-> macOS note: If you get a `"doukutsu-rs" can't be opened` message, right-click doukutsu-rs.app and click open.
+<table>
+  <tr>
+    <td width="50%" valign="top"><h3>🌐 Three languages, throughout</h3><p>Menus, dialogue, items, maps, credits, and image text. Switch between English, 简体中文, and 日本語.</p></td>
+    <td width="50%" valign="top"><h3>🎮 Our own controller experience</h3><p>Xbox / PSP layouts, custom bindings, automatic assignment, hot-plug handling, and enhanced vibration.</p></td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><h3>📳 Shizuku Bluetooth vibration</h3><p>Our Android output path brings physical controller vibration to supported setups through Shizuku authorization.</p></td>
+    <td width="50%" valign="top"><h3>📱 Open it and start playing</h3><p>Offline resource setup in the game-data APK. System-language integration and touch buttons that respond to peripherals.</p></td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><h3>💾 Saves where you want them</h3><p>Private or public Android save folders, with verified migration that keeps your original files.</p></td>
+    <td width="50%" valign="top"><h3>🧩 Ready for Trainer</h3><p>An optional local interface for the separate CaveStory-rs Trainer. You choose when to enable it.</p></td>
+  </tr>
+</table>
 
-> [!NOTE]
-> If you get issues with Epic Games Store version, scroll down for instructions.
+### A little extra for your controller
 
-#### Data files
-
-In order to work doukutsu-rs needs to be paired with supported data files. This repository does not contain any data
-files.
-
-doukutsu-rs works fine with freeware data files or [NXEngine(-evo)](https://github.com/nxengine/nxengine-evo) or from a
-supported copy of [Cave Story+](https://www.nicalis.com/games/cavestory+).
-
-<details>
-  <summary>How to set up data files on Android</summary>
-  
-  If your phone has an app called **"Files"**:
-
-  1. Launch this app.
-  2. Press **☰** on the top left corner.
-  3. Tap on **"doukutsu-rs game data"**.
-  4. Copy your game data files to the opened folder.
-
-
-  If your phone does not have this app:
-  
-  1. Install the **"Material Files"** app from *Hai Zhang* and launch it([Google Play](https://play.google.com/store/apps/details?id=me.zhanghai.android.files) | [F-Droid](https://f-droid.org/en/packages/me.zhanghai.android.files/) | [Github Releases](https://github.com/zhanghai/MaterialFiles/releases)).
-  2. Press **☰** on the top left corner.
-  3. Press **"+ Add storage"**.
-  4. In the window that pops up, press **"External storage"**.
-  5. Press **☰** on the top left corner.
-  6. Tap on **"doukutsu-rs game data"**.
-  7. Press the large blue button at the bottom labelled **"USE THIS FOLDER"**.
-  8. Then click on **☰** in the top left corner again and open.
-  9. Tap on **"files"** above **"+ Add storage"**.
-  10. Copy your game data files to the opened folder.
-</details>
-
-#### Supported game editions and data file acquisition guides
-
-**Freeware**
-
-doukutsu-rs works out of the box when it's placed in the same directory as the original Doukutsu.exe executable. On the initial
-startup, doukutsu-rs will automatically extract the additional resources that are embedded in the vanilla game into the `data`
-directory. Until that is done, both doukutsu-rs and the vanilla executable have to exist in the directory.
+**Bluetooth controller vibration through Shizuku.** We developed an Android output path that uses Shizuku-authorized Shell services to send vibration commands to supported Bluetooth controllers when ordinary application-level output is unavailable. It is an original contribution we are particularly proud of (and we think it might be a first of its kind). This includes player-to-device matching, bounded output, authorization and reconnection handling, and stopping vibration when the game goes into the background. Physical vibration has been confirmed on tested setups, including a non-rooted Xiaomi Mi 9; compatibility still depends on the controller, connection, and OS. The feature is optional and ordinary play does not require Shizuku.
 
 <details>
-<summary>Example root directory</summary>
+<summary><strong>Explore the feature details</strong></summary>
 
-![example root directory with doukutsu-rs and vanilla Cave Story](https://i.imgur.com/3dJ7WMB.png)
+- **Three languages across menus and game resources.** Simplified Chinese, English, and Japanese selection switches dialogue, item descriptions, map names, credits, and relevant image text along with the interface. Separate resource directories, encoding support, and Chinese/Japanese pixel fonts keep the languages usable together. Full playthrough proofreading is still pending.
+- **Our own controller integration and vibration design.** This project implements automatic assignment and hot-plug improvements, Xbox/PSP button-layout presets, persistent custom bindings, and enhanced gameplay vibration. Keyboard, touch input, and player-specific device assignments are preserved. Vibration defaults to enabled with the enhanced effect scheme, while respecting saved preferences. Android separates the effect scheme from the system/Bluetooth output method and provides vibration previews.
+- **Touch controls that respond to peripherals.** Android hides touch buttons when a controller connects and restores them when no relevant external input device remains. An optional 10-second touch-idle hiding setting is off by default; touching restores the display, and holding a control does not hide it.
+- **Simpler Android startup.** The package with game data prepares its resources offline on first launch. The base package asks to download missing resources, and cancellation exits normally. Native setup and error messages support all three languages, including before game fonts are available.
+- **Android language integration.** New installations follow the system/app language: Simplified Chinese locales use Simplified Chinese, Japanese uses Japanese, and other locales currently use English. Manual in-game choices persist; a later system/app language change takes effect again. Changes received during play are deferred until the title screen to preserve the current session.
+- **Save location choice and migration.** Android can keep saves privately or in a selected local public folder. Public storage contains saves, replays, and progress records; game resources and device settings stay private. Migration in the advanced options copies and verifies files before switching, keeps the originals, and handles conflicts explicitly. Returning through the launcher also preserves an existing game session.
+- **Optional local Trainer integration.** Windows and Android builds include the game-side interface for the separately maintained CaveStory-rs Trainer. Windows requires explicit activation, such as `CAVESTORY_TRAINER=1`; Android requires the user's authorization through a Trainer signed with the same certificate. Connections are disabled by default. The game builds independently from the vendored interface sources; the Trainer application is separate.
+- **Consistent packages and distribution notices.** Five architectures each have a base package and a package with game data, with architecture checks, source records, and SHA256 manifests. Android includes a local-only source questionnaire and a release-signature check before starting the native game. In-game project links open only after confirmation. These checks discourage simple repackaging; they cannot prove the download website or prevent all modifications.
 
 </details>
 
-**Cave Story+**
+<a id="screenshots"></a>
 
-doukutsu-rs can be used as drop-in replacement for `CaveStory+.exe` (instructions for Mac are in the "Steam release (Win/Mac/Linux)" section). No modifications to game files are needed.
+## A look inside
 
-**Remastered version (first released in 2017 on Switch)**
+Actual Android captures from our validation sessions. Click an image to view it at full size.
 
-> [!NOTE]
-> This version is **incompatible** with saves from the original version.
->
-> Interchanging the save files may result in spawning in wrong locations, softlocks, graphical glitches, or other issues.
+<table>
+  <tr>
+    <td width="50%"><a href="res/readme/languages.png"><img src="res/readme/languages.png" alt="Three languages in one installation" width="100%"></a><br><sub>Three languages in one installation</sub></td>
+    <td width="50%"><a href="res/readme/japanese-dialogue.png"><img src="res/readme/japanese-dialogue.png" alt="Japanese dialogue, in game" width="100%"></a><br><sub>Japanese dialogue, in game</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="res/readme/android-gameplay.png"><img src="res/readme/android-gameplay.png" alt="Touch controls on Android" width="100%"></a><br><sub>Touch controls on Android</sub></td>
+    <td width="50%"><a href="res/readme/controller-options.png"><img src="res/readme/controller-options.png" alt="Our controller and vibration options" width="100%"></a><br><sub>Our controller and vibration options</sub></td>
+  </tr>
+</table>
 
-<details>
-<summary>Steam (2026) - not yet supported</summary>
+<a id="about"></a>
 
-See https://github.com/doukutsu-rs/doukutsu-rs/issues/365 for status.
-</details>
+## Why this project exists
 
-<details>
-<summary>Nintendo Switch</summary>
+The motivation is simple: to enjoy Cave Story on the devices we use today, in a language we can comfortably read, with controls that feel convenient on both a computer and a phone.
 
-Extract the `data` folder (contained in `romfs`) from your console using tool such as [nxdumptool](https://github.com/DarkMatterCore/nxdumptool).
+doukutsu-rs provides the foundation for that goal. This fork began with the missing pieces of a complete Simplified Chinese experience: menus alone were not enough; dialogue, item descriptions, map names, fonts, and image text needed to work together. It has since grown to cover language switching, easier resource setup, controller handling, vibration, and Android save storage.
 
-**Important notes:**
+<a id="comparison"></a>
 
-- doukutsu-rs doesn't rely on the original ROM or executable, you just need the data files, go to `RomFS options` menu to just extract the files to SD card so you don't need to do any extra steps.
-- Ensure you're dumping the files **with update included** (`Use update/DLC` option), as 1.0 isn't supported.
+## What is different?
 
-**Nintendo Switch homebrew port specific info**
+### Compared with the original 2004 PC game
 
-If you're running the homebrew port (drshorizon.nro) on your Switch, you can avoid the dumping step, doukutsu-rs will
-automatically detect and mount the data files if you run it over Cave Story+ in Title Override mode (hold `R` while starting CS+ and launch d-rs from hbmenu).
+The original Cave Story is Daisuke Amaya's game, released under the name Pixel. CaveStory-rs runs its game data through the Rust engine developed by doukutsu-rs. It builds on that engine's support for modern systems, display options, configurable input, and Android touch controls.
 
-You can put your own data files in `/switch/doukutsu-rs/data` directory on SD Card, which will be overlayed over RomFS if
-you run it in setup described above.
+The focus remains the freeware adventure, its pixel art, music, and gameplay. This fork adds multilingual resource handling and platform conveniences. It also adds a short distribution reminder to a known early Balrog dialogue, so the supplied scripts include a small, deliberate addition to the original text. The original scene and battle choices remain, and original scripts are backed up before patching.
 
-</details>
+Our current adaptation and validation cover the freeware data and its translations. Upstream's support for other editions and platforms does not mean this fork has validated Cave Story+, commercial remasters, or every upstream port.
 
-**Original version (first released in 2011 on Steam)** - expand for instructions
+### Compared with doukutsu-rs
 
-<details>
-<summary>Steam release (Win/Mac/Linux)</summary>
+This fork brings together complete three-language resource switching, our own controller and vibration work, Shizuku Bluetooth output, Android startup and save management, and the optional Trainer interface. The [feature overview](#features) introduces these additions; the underlying Rust engine comes from doukutsu-rs.
 
-The `data` folder is in the same place across all platforms.
+<a id="play"></a>
 
-If you want to use doukutsu-rs as a substitute for Mac version of Cave Story+ (which at moment of writing doesn't work
-on 10.15+ anymore), do the following:
+## Getting started
 
-1. Find the doukutsu-rs executable:
-   - In stables, nightly, and CI builds, it's in `doukutsu-rs.app/Contents/MacOS/doukutsu-rs`
-   - In your own builds, it's in `target/(release|debug)/doukutsu-rs`
-2. Open Steam Library, select `Cave Story+`, press the `Manage` button (gear icon) and select `Properties...`
-3. Select `Local Files` and press `Browse...`.
-4. Open the `Cave Story+.app` bundle and navigate to `Contents/MacOS` directory.
-5. Rename the `Cave Story+` executable to something else or delete it.
-6. Copy the doukutsu-rs executable and rename it to `Cave Story+`.
-7. Launch the game from Steam and enjoy!
+The current local delivery matrix is:
 
-![image](https://user-images.githubusercontent.com/53099651/155904982-eb6032d8-7a4d-4af7-ae6f-b69041ecfaa4.png)
+| Platform | Architectures | Formats |
+| --- | --- | --- |
+| Windows | `x86_64` · `x86_32` · `arm64` | ZIP, base / `_game` |
+| Android | `arm64-v8a` · `armeabi-v7a` | APK, base / `_game` |
 
-</details>
+- **With game data (`_game`):** three languages and fonts, plus the matching Windows runtime. Android prepares bundled resources offline.
+- **Base:** supply compatible game resources and the matching Windows Visual C++ runtime; Android offers to download missing resources.
 
->  [!WARNING]
-> **EPIC GAMES STORE VERSION WARNING**
-> 
-> Nicalis for some reason ships a stray `opengl32.dll` DLL from Windows 7 with the Epic Games Store copies of Cave Story+.
-> 
-> However as the game is 32-bit and the dll is 64-bit it has no effect on the original version, but as it's a core Windows DLL and doukutsu-rs ships 64-bit builds and uses OpenGL, it's makes the game crash on startup.
-> 
-> The fix is to simply delete `opengl32.dll`, as it's not used anyway.
+Files use `CaveStory-rs_<platform>_<YYYYMMDD>_<architecture>[_game].zip` or `.apk`. Android packages are separate ABI builds; choose one supported by your device's OS. The configured Android minimum is Android 7.0 / API 24, which is not a claim that every compatible device has been tested.
+
+Download this fork from [GitHub Releases](https://github.com/TG-Twilight/CaveStory-rs/releases/latest). Releases currently use locally built and verified packages. The historical upstream workflow is disabled; the fork's cloud build and automatic publishing pipeline still needs adaptation and validation.
+
+### Windows
+
+Extract the entire package with game data to a writable folder and run `CaveStory-rs.exe`. It initially uses Simplified Chinese; select English or Japanese in **选项 → 语言** (Options → Language). Keep `user/` when upgrading or moving the installation, as it contains saves and settings. Keep the original `Doukutsu.exe` and the original executables in the language directories for resource extraction.
 
 <details>
-<summary>Epic Games Store</summary>
+<summary><strong>Base package setup and adding languages</strong></summary>
 
-Check your default installation directory.
+For a base package, use a working copy of compatible freeware data. The tested Chinese setup merges the supplied `data/fonts` and `data/locale` into a copy of the Simplified Chinese game and places `CaveStory-rs.exe` beside `Doukutsu.exe`. Preserve existing saves and customized files.
 
-![image](https://user-images.githubusercontent.com/53099651/155905035-0080eace-bd98-4cf5-9628-c98334ea768c.png)
+Recognized managed Chinese installations can add English or Japanese resources with the following commands, substituting the actual `data` path. Existing language directories are protected from replacement:
 
-</details>
-
-<details>
-<summary>GOG</summary>
-
-Check your default installation directory.
-
-![image](https://user-images.githubusercontent.com/53099651/155906494-1e53f174-f12f-41be-ab53-8745cdf735b5.png)
+```powershell
+py tools/install_english_resources.py --data "C:/Games/CaveStory-rs/data"
+py tools/install_japanese_resources.py --data "C:/Games/CaveStory-rs/data"
+```
 
 </details>
 
+### Android
+
+Install the APK for your ABI, complete resource setup, and choose a private or public save folder. Public folders must be local folders supported by the system picker; cloud storage and arbitrary document providers are not supported. Private files remain accessible through the game's document provider in a file manager's **Add storage** flow.
+
+To move saves later, return to the title screen and open **Options → Advanced... → Save folder**. The original files are retained. Keep a separate backup when moving between installations or devices.
+
+Base and game-data release APKs share `io.github.cavestory_rs` and the same signing identity, allowing in-place updates between them. The older `io.github.doukutsu_rs` app and debug apps have separate storage; their saves are not imported automatically.
+
+### Game resources
+
+The resource entry point is the [Cave Story Tribute Site](https://www.cavestory.one/download/cave-story.php). The Simplified Chinese translation is credited to Hydrowing, the English translation to Aeon Genesis, and the Japanese archive comes from Studio Pixel. Packaging tools record the selected archives and hashes. Packages with game data are intended to simplify setup and reduce repeated downloads from the tribute site; complete original game data is kept out of the source repository and base packages.
+
+Repository map and contribution guidelines: [Contributing](docs/CONTRIBUTING.md).
+
+<a id="build"></a>
+
+## Building from source
+
+Choose a build path below. All outputs stay in the sibling CaveStory-rs-runs directory.
+
 <details>
-<summary>Humble Bundle</summary>
+<summary><strong>Prepare the source and tools</strong></summary>
 
-The archive from Humble Bundle contains the necessary `data` folder, in the same folder as `CaveStory+.exe`.
+```sh
+git clone --recurse-submodules https://github.com/TG-Twilight/CaveStory-rs.git
+cd CaveStory-rs
+git submodule update --init --recursive
+```
 
-![image](https://user-images.githubusercontent.com/96957561/156861929-7fa03951-442b-4277-b673-474189411103.png)
+Use Rust/Cargo, Git, a C/C++ toolchain, and CMake. [Cargo.toml](Cargo.toml) declares Rust 1.88 as the minimum; recorded local builds used Rust 1.98.1, so the minimum itself has not been validated. The default desktop backend builds SDL2 from source. Resource preparation additionally requires Python 3 and Pillow (`py -m pip install Pillow` on Windows).
+
+Build output belongs in the sibling `CaveStory-rs-runs/` directory. [.cargo/config.toml](.cargo/config.toml) already directs Cargo there; downloads and packaging caches are also kept outside the source tree. The game-side Trainer dependencies are included in `vendor/trainer/`; no sibling Trainer checkout is needed.
 
 </details>
 
 <details>
-<summary>WiiWare</summary>
+<summary><strong>Windows engine build</strong></summary>
 
-1. [Dump Your WiiWare `.wad`](https://wii.guide/dump-wads.html)
-2. [Extract and decompress the `data` folder](https://docs.google.com/document/d/1hDNDgNl0cUDlFOQ_BUOq3QCGb7S0xfUxRoob-hfM-DY)
-   Example of a [valid uncompressed `data` folder](https://user-images.githubusercontent.com/53099651/159585593-43fead24-b041-48f4-8332-be50d712310d.png)
+Install Visual Studio C++ Build Tools and a Windows SDK, and run from a developer shell configured for the target architecture. Ensure CMake is on `PATH`. For an x64 engine build:
 
-</details>
+```powershell
+rustup target add x86_64-pc-windows-msvc
+cargo build --release --locked --bin CaveStory-rs --target x86_64-pc-windows-msvc
+```
 
-#### Controls
-
-Same controls as the default for freeware and Cave Story+ keyboard.
-
-To change, use the control customization menu or edit `doukutsu-rs\data\settings.json` within your user directory.
-
-|                           | P1        | P2        |
-| ------------------------- | --------- | --------- |
-| Movement                  | `← ↑ ↓ →` | `, L . /` |
-| Jump                      | `Z`       | `B`       |
-| Shoot                     | `X`       | `N`       |
-| Cycle Weapon              | `A and S` | `G and H` |
-| Inventory / Skip cutscene | `Q`       | `T`       |
-| Map                       | `W`       | `Y`       |
-| Strafe                    | `LShift`  | `RShift`  |
-
-- `Alt + Enter` - Toggle Fullscreen
-- `F2` (While paused) - Quick Restart
-
-#### Screenshots
-
-<details>
-<summary>Freeware</summary>
-
-![JP Freeware 2](https://user-images.githubusercontent.com/53099651/155924461-c63afc93-a41f-4cfd-ac9f-8f021cebcb04.png)
-
-![Toroko Fight Freeware](https://user-images.githubusercontent.com/53099651/155924215-d492907a-ed0e-4323-bd46-61745b8fb32a.png)
-
-![No Lighting Freeware](https://user-images.githubusercontent.com/53099651/155923814-621cf29e-bb20-4680-a96d-f049aaef1f88.png)
+The executable is `../CaveStory-rs-runs/cache/cargo/x86_64-pc-windows-msvc/release/CaveStory-rs.exe`. This compiles the engine; pair it with game resources as described above. The other Windows targets are `i686-pc-windows-msvc` and `aarch64-pc-windows-msvc`, each requiring its matching MSVC tools and libraries.
 
 </details>
 
 <details>
-<summary>Original CS+</summary>
+<summary><strong>Android build</strong></summary>
 
-![CS+ Sand Zone](https://user-images.githubusercontent.com/53099651/155923620-db230077-0df5-4de4-b086-be6b4dcbc6df.png)
+The current project uses JDK 17-compatible tooling, SDK 35, Build Tools `35.0.1`, NDK `28.0.13004108`, and CMake 3.22 or newer. The Gradle wrapper and Android Gradle Plugin versions are defined in the repository. Install both Rust targets:
 
-![CS+ Showoff Outer Wall](https://user-images.githubusercontent.com/53099651/155920013-3967cd03-8d69-4fc5-8f1d-fe659ff2e953.png)
+```powershell
+rustup target add aarch64-linux-android armv7-linux-androideabi
+```
 
-![CS+ Challenge](https://user-images.githubusercontent.com/53099651/155919381-7e8159a0-a7cf-461a-8be2-2ce864631299.png)
+**Signing must be configured before building.** Both Debug and Release currently require a JKS; there is no automatic debug-key fallback. Gradle accepts `REVIA_KS_PATH` and `REVIA_KS_PASS`, expects one private-key entry, and uses the same store/key password. The maintainer's private key is not included. For your own build, supply your own key and configure [SignaturePolicy.java](drsandroid/app/src/main/java/io/github/cavestory_rs/SignaturePolicy.java) for your certificate; otherwise the installed app will refuse to start. Clearly identify redistributed builds as your own.
+
+Once signing variables and `JAVA_HOME` / `ANDROID_HOME` are set, run from the repository root:
+
+```powershell
+cd drsandroid
+./gradlew.bat assembleDebug --project-cache-dir ../../CaveStory-rs-runs/cache/gradle-project --console=plain
+cd ..
+```
+
+This generates two base debug APKs under `../CaveStory-rs-runs/cache/android/app/build/outputs/apk/debug/`, using the `.debug` application suffix. `assembleRelease` builds the release variant. To bundle verified game archives, first prepare them with `py tools/package_windows_with_game.py --android-assets <directory-inside-CaveStory-rs-runs>`, then pass that directory to Gradle as `-PcaveStoryGameAssets=<directory>`. Initial dependency, font, and game-archive preparation requires network access when caches are empty.
 
 </details>
 
 <details>
-<summary>Remastered CS+</summary>
+<summary><strong>Full local delivery: five architectures, ten packages</strong></summary>
 
-![Balcony Switch](https://user-images.githubusercontent.com/53099651/155918810-063c0f06-2d48-485f-8367-6337525deab7.png)
+The maintainer's build entry point is:
 
-![Dogs Switch](https://github.com/doukutsu-rs/doukutsu-rs/assets/6276139/30ba01ae-375d-4488-98c4-98e3e8c7f187)
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_all.ps1
+```
 
-![Almond Switch](https://github.com/doukutsu-rs/doukutsu-rs/assets/6276139/42d4b6a3-4fc5-4aaf-9535-462c4c484dc7)
+It creates Android's two ARM APKs and Windows' three architecture ZIPs, each with base and game-data variants, under `../CaveStory-rs-runs/builds/<batch>/`. All ten share a date version. The batch includes `build-info.json`, `SHA256SUMS`, and `verified-delivery.json`.
 
-![Hell Switch](https://user-images.githubusercontent.com/53099651/155918602-62268274-c529-41c2-a87e-0c31e7874b94.png)
+This is currently a Windows maintainer workflow. Before using it on another machine, adapt the Visual Studio 2019/MSVC and ARM64 tool paths in [build_windows.cmd](tools/build_windows.cmd), [cargo_windows_arm64.ps1](tools/cargo_windows_arm64.ps1), and [windows-arm64.cmake](tools/windows-arm64.cmake), and the JBR/SDK paths in [build_android.ps1](tools/build_android.ps1). That script reads the password from the Windows **user-level** `REVIA_KS_PASS` environment variable. The APK verification scripts also expect the maintainer's certificate fingerprint, so independent builds must update that expectation together with the app's signing policy.
+
+Prepare the pinned font/game archives and the correct Visual C++ runtime files for all three Windows architectures; see [package_windows_with_game.py](tools/package_windows_with_game.py) and [build_windows.ps1](tools/build_windows.ps1). The complete workflow prepares game archives and font caches during its Android stage before Windows packaging. A successful compilation alone does not replace package verification or a device test.
 
 </details>
 
-#### Credits
+<a id="status"></a>
 
-- Studio Pixel/Nicalis for Cave Story
-- [AppleHair](https://github.com/AppleHair) - icon redesign for all platforms(`crabsue-icon`).
-- [@Daedily](https://twitter.com/Daedliy) - brand artwork (Icon / Banner / Server), screenshots for this guide.
-- [ggez](https://github.com/ggez/ggez) - parts of it are used in `crate::framework`, notably the VFS code.
-- [Clownacy](https://github.com/Clownacy) - widescreen camera code.
-- [LunarLambda for organism](https://github.com/doukutsu-rs/organism) - used as basis for our Organya playback engine.
-- [Zoroyoshi](http://z.apps.atjp.jp/k12x10/) - k12x10 font we use as built-in font.
+## Current limits and validation
+
+Windows x64/x86 and Android ARM64 have local runtime evidence. Android ARM32 has device evidence from an earlier batch, with further full-flow regression still pending. Windows ARM64 packages have build and static checks but no hardware runtime validation. Linux and other upstream platforms are outside the current delivery matrix.
+
+<details>
+<summary><strong>Remaining work</strong></summary>
+
+Remaining work includes complete playthrough and ending validation, full script proofreading, English word wrapping and Chinese punctuation layout, the touch inventory button's `Inv` label, broader controller/vibration and Android version coverage, interrupted-download recovery testing, audio-warning investigation, and 16 KB page-size validation. Traditional Chinese is planned for later.
+
+</details>
+
+<a id="credits"></a>
+
+## Afterword and acknowledgements
+
+Cave Story is the reason this project exists. To **Daisuke Amaya (Pixel / 天谷大輔)** and **[Studio Pixel](https://studiopixel.jp/)**: thank you for creating a world whose characters, music, and small details still make us want to return. This work is a tribute to that game and to the care behind it.
+
+To the **[doukutsu-rs team and contributors](AUTHORS.md)**: thank you for making the engine open, portable, and practical to build upon. The work in this fork depends on yours. We hope these additions help more players enjoy what you have made possible.
+
+Thanks also to Hydrowing and Aeon Genesis for the translations, the Cave Story Tribute Site for preserving resources and information, and [Fusion Pixel](https://github.com/TakWolf/fusion-pixel-font) and its contributors for the pixel fonts. The inherited credits for AppleHair, Daedliy, ggez, Clownacy, LunarLambda/organism, Zoroyoshi, and other contributors remain in [AUTHORS.md](AUTHORS.md).
+
+> The hope is modest: that someone can open the game on a device they already own, read it comfortably, and spend a little more time in Cave Story's world.
+
+<a id="license"></a>
+
+## License and attribution
+
+The engine is distributed under the [MIT License](LICENSE), retaining upstream attribution. Cave Story game data, translations, fonts, and other third-party assets retain their own terms and notices; the engine license does not grant rights to those assets. Fusion Pixel fonts use the SIL Open Font License, and vendored Trainer notices are included in [TRAINER-LICENSES.txt](vendor/trainer/notices/TRAINER-LICENSES.txt). Resource availability on a download site is not, by itself, permission for redistribution.
+
+CaveStory-rs is a community project, independently maintained from Studio Pixel and doukutsu-rs. Its distribution reminders do not change the MIT license or the terms of third-party works.
+
+<p align="center"><sub><a href="res/readme/ARTWORK.md">Cover illustration: AI-generated · Gallery: actual game captures · Asset credits</a></sub></p>

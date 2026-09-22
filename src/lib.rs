@@ -6,6 +6,12 @@ extern crate strum;
 #[macro_use]
 extern crate strum_macros;
 
+#[cfg(trainer_interface)]
+mod trainer;
+#[cfg(trainer_interface)]
+mod trainer_platform;
+#[cfg(target_os = "android")]
+mod trainer_android;
 pub mod common;
 mod components;
 mod data;

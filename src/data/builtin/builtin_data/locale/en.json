@@ -3,7 +3,7 @@
   "font": "csfont.fnt",
   "font_scale": "0.5",
   "common": {
-    "name": "doukutsu-rs",
+    "name": "CaveStory-rs",
     "back": "< Back",
     "yes": "Yes",
     "no": "No",
@@ -120,7 +120,9 @@
       },
       "controls": "Controls...",
       "controls_menu": {
-        "display_touch_controls": "Display touch controls:"
+        "display_touch_controls": "Display touch controls:",
+        "auto_hide_touch_controls": "Auto-hide touch buttons (10s):",
+        "touch_controls_required": "Touch buttons: on (no devices)"
       },
       "language": "Language...",
       "language_menu": {
@@ -147,6 +149,13 @@
         "allow_strafe": "Allow strafe:"
       },
       "links": "Links...",
+      "links_menu": {
+        "tribute": "Cave Story Tribute Website",
+        "github": "CaveStory-rs GitHub",
+        "get_plus": "Get Cave Story+",
+        "pixel_shop": "Pixel's Shop (Shop Pi)",
+        "studio_pixel": "Studio Pixel Website"
+      },
       "advanced": "Advanced...",
       "advanced_menu": {
         "open_user_data": "Open user data directory",
@@ -161,12 +170,15 @@
       }
     },
     "controls_menu": {
+      "layout": "Gamepad layout:",
+      "custom_layout": "Custom",
       "select_player": {
         "entry": "Select player:",
         "player_1": "Player 1",
         "player_2": "Player 2"
       },
       "controller": {
+        "automatic": "Automatic",
         "entry": "Controller...",
         "keyboard": "Keyboard",
         "touch_controls_or_keyboard": "Touch controls/Keyboard"
@@ -194,6 +206,10 @@
         "cancel_touch": "(Esc or touch the screen to cancel)"
       },
       "rumble": "Rumble:",
+      "rumble_mode": "Rumble mode:",
+      "rumble_output": "Rumble output",
+      "rumble_original": "Original",
+      "rumble_enhanced": "Enhanced",
       "reset_confirm": "Reset...",
       "reset_confirm_menu_title": "Reset controls?"
     }

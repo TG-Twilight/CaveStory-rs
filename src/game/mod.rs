@@ -33,6 +33,7 @@ pub mod npc;
 pub mod physics;
 pub mod player;
 pub mod profile;
+pub mod rumble;
 pub mod scripting;
 pub mod settings;
 pub mod shared_game_state;
@@ -40,7 +41,7 @@ pub mod stage;
 pub mod weapon;
 
 #[derive(Debug, Parser)]
-#[command(version, about, long_about = None)]
+#[command(name = crate::common::APP_DISPLAY_NAME, version, about, long_about = None)]
 pub struct LaunchOptions {
     #[arg(long, hide = cfg!(not(feature = "netplay")))]
     /// Do not create a window and skip audio initialization.
@@ -252,7 +253,15 @@ impl Game {
 
         if let Some(scene) = &mut self.scene {
             scene.draw(state_ref, ctx)?;
-            if state_ref.settings.touch_controls && state_ref.settings.display_touch_controls {
+            let touch_now = Instant::now();
+            state_ref.touch_controls.visibility.update_idle(
+                state_ref.settings.auto_hide_touch_controls,
+                !state_ref.touch_controls.points.is_empty(),
+                touch_now,
+            );
+            if state_ref.settings.touch_controls && state_ref.settings.display_touch_controls
+                && (!cfg!(target_os = "android") || state_ref.touch_controls.visibility.visible(
+                    state_ref.settings.auto_hide_touch_controls, touch_now)) {
                 state_ref.touch_controls.draw(
                     state_ref.canvas_size,
                     state_ref.scale,

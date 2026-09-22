@@ -13,7 +13,56 @@ use crate::game::player::{ControlMode, Player, TargetPlayer};
 use crate::game::shared_game_state::SharedGameState;
 use crate::game::weapon::WeaponType;
 
+#[cfg(test)]
+mod feedback_tests {
+    use super::*;
+    use crate::framework::context::Context;
+
+    fn fixture() -> (SharedGameState, Player) {
+        let mut ctx = Context::new();
+        ctx.headless = true;
+        ctx.filesystem.mount_vfs(Box::new(crate::data::builtin_fs::BuiltinFS::new()));
+        let mut state = SharedGameState::new(&mut ctx).unwrap();
+        let mut player = Player::new(&mut state, &mut ctx);
+        player.cond.set_alive(true);
+        player.hit_bounds = HitExtents { left: 2048, right: 2048, top: 2048, bottom: 2048 };
+        player.x = 0;
+        player.y = 10 * 512;
+        player.vel_y = -0x500;
+        player.feedback.begin_tick(true, player.y, false, 50);
+        (state, player)
+    }
+
+    #[test]
+    fn flat_and_sloped_ceiling_collisions_emit_one_tap() {
+        let (mut state, mut player) = fixture();
+        player.test_block_hit(&mut state, 0, 0);
+        assert!(player.flags.hit_top_wall());
+        assert_eq!(player.feedback.take().unwrap().duration_ms, 50);
+        player.test_block_hit(&mut state, 0, 0);
+        assert_eq!(player.feedback.take(), None);
+
+        let (mut state, mut player) = fixture();
+        player.y = 6 * 512;
+        player.test_hit_upper_left_slope_high(&mut state, 0, 0);
+        assert!(player.flags.hit_top_wall());
+        assert_eq!(player.feedback.take().unwrap().duration_ms, 50);
+    }
+
+    #[test]
+    fn solid_npc_ceiling_emits_a_tap_before_velocity_is_zeroed() {
+        let (state, mut player) = fixture();
+        let mut npc = NPC::create(0, &state.npc_table);
+        npc.hit_bounds = HitExtents { left: 4096, right: 4096, top: 4096, bottom: 4096 };
+        let flags = player.test_hit_npc_solid_soft(&npc);
+        assert!(flags.hit_top_wall());
+        assert_eq!(player.feedback.take().unwrap().duration_ms, 50);
+    }
+}
+
 impl PhysicalEntity for Player {
+    fn record_head_bump(&mut self) { self.feedback.head_bump(); }
+    fn record_landing(&mut self) { self.feedback.land(self.y, self.vel_y); }
     #[inline(always)]
     fn x(&self) -> i32 {
         self.x
@@ -135,6 +184,7 @@ impl Player {
             && ((self.y - self.hit_bounds.top as i32) > npc.y)
         {
             if self.vel_y < 0 {
+                if self.vel_y < -0x200 && !self.cond.hidden() { self.feedback.head_bump(); }
                 self.vel_y = 0;
             }
 
@@ -147,10 +197,12 @@ impl Player {
             && ((self.y + self.hit_bounds.bottom as i32) < (npc.y + 0x600))
         {
             if npc.npc_flags.bouncy() {
+                self.feedback.land(self.y, self.vel_y - npc.vel_y);
                 self.vel_y = npc.vel_y - 0x200;
                 flags.set_hit_bottom_wall(true);
             } else if !self.flags.hit_bottom_wall() && self.vel_y > npc.vel_y {
                 self.y = npc.y - npc.hit_bounds.top as i32 - self.hit_bounds.bottom as i32 + 0x200;
+                self.feedback.land(self.y, self.vel_y - npc.vel_y);
                 self.vel_y = npc.vel_y;
                 self.x += npc.vel_x;
                 flags.set_hit_bottom_wall(true);
@@ -204,6 +256,7 @@ impl Player {
             if (self.y - self.hit_bounds.top as i32) < (npc.y + npc.hit_bounds.bottom as i32)
                 && (self.y - self.hit_bounds.top as i32) > npc.y
             {
+                if self.vel_y < -0x200 && !self.cond.hidden() { self.feedback.head_bump(); }
                 if self.vel_y >= npc.vel_y {
                     if self.vel_y < 0 {
                         self.vel_y = 0;
@@ -220,6 +273,7 @@ impl Player {
                 && (self.y + self.hit_bounds.bottom as i32) < (npc.y + 0x600)
             {
                 if self.vel_y - npc.vel_y > 0x400 {
+                    self.feedback.land(self.y, self.vel_y - npc.vel_y);
                     state.sound_manager.play_sfx(23);
                 }
 

@@ -22,39 +22,30 @@ impl NoDataScene {
     }
 }
 
-#[cfg(target_os = "android")]
-static REL_URL: &str = "https://github.com/doukutsu-rs/doukutsu-rs#data-files";
-
 impl Scene for NoDataScene {
     #[allow(unused)]
     fn tick(&mut self, state: &mut SharedGameState, ctx: &mut Context) -> GameResult {
         #[cfg(target_os = "android")]
         {
-            use crate::common::Rect;
-            use crate::util::browser;
-
             if !self.flag {
                 self.flag = true;
-                let _ = std::fs::create_dir("/sdcard/doukutsu/");
-                let _ = std::fs::write("/sdcard/doukutsu/extract game data here.txt", REL_URL);
-                let _ = std::fs::write("/sdcard/doukutsu/.nomedia", b"");
-            }
-
-            let screen = Rect::new(0, 0, state.canvas_size.0 as isize, state.canvas_size.1 as isize);
-            if state.touch_controls.consume_click_in(screen) {
-                if let Err(err) = browser::open(REL_URL) {
-                    self.err = err.to_string();
+                if let Err(error) = crate::framework::android_locale::show_data_error(&self.err) {
+                    log::warn!("Cannot show native data error: {}", error);
                 }
             }
+
         }
         Ok(())
     }
 
     fn draw(&self, state: &mut SharedGameState, ctx: &mut Context) -> GameResult {
         graphics::clear(ctx, Color::from_rgb(30, 0, 0));
+        // Android supplies localized guidance using system fonts, including when
+        // the game's own font data is unavailable.
+        if cfg!(target_os = "android") { return Ok(()); }
 
         state.font.builder().center(state.canvas_size.0).y(10.0).color((255, 100, 100, 255)).draw(
-            "doukutsu-rs internal error",
+            "CaveStory-rs internal error",
             ctx,
             &state.constants,
             &mut state.texture_set,
@@ -68,31 +59,6 @@ impl Scene for NoDataScene {
         )?;
 
         let mut y = 60.0;
-        #[cfg(target_os = "android")]
-        {
-            let yellow = (255, 255, 0, 255);
-            state.font.builder().center(state.canvas_size.0).y(y).color(yellow).draw(
-                "It's likely that you haven't extracted the game data properly.",
-                ctx,
-                &state.constants,
-                &mut state.texture_set,
-            )?;
-            y += 20.0;
-            state.font.builder().center(state.canvas_size.0).y(y).color(yellow).draw(
-                "Click here to open the guide.",
-                ctx,
-                &state.constants,
-                &mut state.texture_set,
-            )?;
-            y += 20.0;
-            state.font.builder().center(state.canvas_size.0).y(y).color(yellow).draw(
-                REL_URL,
-                ctx,
-                &state.constants,
-                &mut state.texture_set,
-            )?;
-            y += 20.0;
-        }
 
         {
             // put max 80 chars per line

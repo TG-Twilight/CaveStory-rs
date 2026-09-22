@@ -5,7 +5,10 @@ use crate::framework::context::Context;
 use crate::framework::error::GameResult;
 use crate::framework::graphics;
 use crate::game::frame::Frame;
-use crate::game::scripting::tsc::text_script::{ConfirmSelection, TextScriptExecutionState, TextScriptLine};
+use crate::game::scripting::tsc::text_script::{
+    ConfirmSelection, TextScriptExecutionState, TextScriptLine,
+    TEXT_BOX_FACE_OFFSET, TEXT_BOX_PADDING, TEXT_BOX_WIDTH,
+};
 use crate::game::shared_game_state::SharedGameState;
 use crate::graphics::font::{Font, Symbols};
 
@@ -79,7 +82,7 @@ impl GameEntity<()> for TextBoxes {
         } else {
             state.canvas_size.1 as f32 - off_bottom - 66.0
         };
-        let left_pos = off_left + center - 122.0;
+        let left_pos = off_left + center - TEXT_BOX_WIDTH / 2.0;
 
         {
             let batch = state.texture_set.get_or_load_batch(ctx, &state.constants, "TextBox")?;
@@ -149,7 +152,7 @@ impl GameEntity<()> for TextBoxes {
 
         if state.textscript_vm.face != 0 {
             let clip_rect = Rect::new_size(
-                ((left_pos + 14.0) * state.scale) as isize,
+                ((left_pos + TEXT_BOX_PADDING) * state.scale) as isize,
                 ((top_pos + 8.0) * state.scale) as isize,
                 (48.0 * state.scale) as isize,
                 (48.0 * state.scale) as isize,
@@ -171,7 +174,7 @@ impl GameEntity<()> for TextBoxes {
 
             let face_x = (4.0 + (6 - self.slide_in) as f32 * 8.0) - 52.0;
 
-            let final_x = left_pos + 14.0 + face_x;
+            let final_x = left_pos + TEXT_BOX_PADDING + face_x;
             let final_y = top_pos + 8.0;
             let rect = Rect::new_size((face_num as u16 % 6) * 48, (face_num as u16 / 6) * 48, 48, 48);
 
@@ -215,7 +218,7 @@ impl GameEntity<()> for TextBoxes {
             }
         }
 
-        let text_offset = if state.textscript_vm.face == 0 { 0.0 } else { 56.0 };
+        let text_offset = if state.textscript_vm.face == 0 { 0.0 } else { TEXT_BOX_FACE_OFFSET };
 
         let y_offset = if let TextScriptExecutionState::MsgNewLine(_, _, _, _, counter) = state.textscript_vm.state {
             16.0 - counter as f32 * 4.0
@@ -240,7 +243,7 @@ impl GameEntity<()> for TextBoxes {
                 state
                     .font
                     .builder()
-                    .position(left_pos + text_offset + 14.0, top_pos + 10.0 + idx as f32 * 16.0 - y_offset)
+                    .position(left_pos + text_offset + TEXT_BOX_PADDING, top_pos + 10.0 + idx as f32 * 16.0 - y_offset)
                     .shadow(state.constants.textscript.text_shadow)
                     .with_symbols(Some(symbols))
                     .draw_iter(line.iter().copied(), ctx, &state.constants, &mut state.texture_set)?;
@@ -266,7 +269,7 @@ impl GameEntity<()> for TextBoxes {
                         (builder.compute_width_iter(state.textscript_vm.line_3.iter().copied()), top_pos + 10.0 + 32.0)
                     }
                 };
-                x += left_pos + text_offset + 14.0;
+                x += left_pos + text_offset + TEXT_BOX_PADDING;
 
                 graphics::draw_rect(
                     ctx,

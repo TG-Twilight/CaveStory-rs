@@ -1,4 +1,5 @@
 use crate::common::Rect;
+use crate::graphics::font::Font;
 use crate::entity::GameEntity;
 use crate::framework::context::Context;
 use crate::framework::error::GameResult;
@@ -86,11 +87,13 @@ impl BossLifeBar {
             state.canvas_size.1 - 16.0,
             &rect_life_bar,
         );
-        batch.add_rect(
-            ((state.canvas_size.0 - box_length as f32) / 2.0 + 8.0).floor(),
-            state.canvas_size.1 - 16.0,
-            &text_rect,
-        );
+        if state.loc.t_optional("game.boss").filter(|text| !text.trim().is_empty()).is_none() {
+            batch.add_rect(
+                ((state.canvas_size.0 - box_length as f32) / 2.0 + 8.0).floor(),
+                state.canvas_size.1 - 16.0,
+                &text_rect,
+            );
+        }
 
         batch.draw(ctx)?;
 
@@ -124,7 +127,9 @@ impl BossLifeBar {
         batch.add_rect((state.canvas_size.0 - 18.0).floor(), state.canvas_size.1 - 20.0, &box_rect3);
         batch.add_rect((base_x + 34.0).floor(), state.canvas_size.1 - 16.0, &rect_prev_bar);
         batch.add_rect((base_x + 34.0).floor(), state.canvas_size.1 - 16.0, &rect_life_bar);
-        batch.add_rect((base_x + 2.0).floor(), state.canvas_size.1 - 16.0, &text_rect);
+        if state.loc.t_optional("game.boss").filter(|text| !text.trim().is_empty()).is_none() {
+            batch.add_rect((base_x + 2.0).floor(), state.canvas_size.1 - 16.0, &text_rect);
+        }
 
         batch.draw(ctx)?;
 
@@ -172,6 +177,18 @@ impl GameEntity<(&NPCList, &NPCAccessToken, &BossNPC)> for BossLifeBar {
         match state.constants.is_switch {
             true => self.draw_nx(state, ctx, _frame),
             false => self.draw_regular(state, ctx, _frame),
+        }?;
+        if let Some(text) = state.loc.t_optional("game.boss").filter(|text| !text.trim().is_empty()) {
+            let x = if state.constants.is_switch {
+                (state.canvas_size.0 - 148.0 + 2.0).floor()
+            } else {
+                ((state.canvas_size.0 - 256.0) / 2.0 + 8.0).floor()
+            };
+            state.font.builder()
+                .position(x, state.canvas_size.1 - 16.0 - (state.font.line_height() - 8.0) / 2.0)
+                .center(32.0)
+                .draw(text, ctx, &state.constants, &mut state.texture_set)?;
         }
+        Ok(())
     }
 }

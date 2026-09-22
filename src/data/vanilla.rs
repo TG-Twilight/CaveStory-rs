@@ -35,6 +35,23 @@ impl RangeExt for Range<u32> {
 }
 
 impl VanillaExtractor {
+    /// Only the managed optional language pack is extracted here. Base game and
+    /// player data are untouched, and stage.sect is published last for retries.
+    pub fn extract_english_pack(data_dir: &std::path::Path) -> GameResult {
+        Self::extract_language_pack(data_dir, "en", "english-install.json")
+    }
+
+    pub fn extract_language_pack(data_dir: &std::path::Path, code: &str, marker: &str) -> GameResult {
+        let directory = data_dir.join(code);
+        if !directory.join(marker).is_file()
+            || directory.join("stage.sect").is_file() {
+            return Ok(());
+        }
+        let exe_buffer = std::fs::read(directory.join("Doukutsu.exe"))?;
+        let extractor = Self { exe_buffer, data_base_dir: String::new(), root: directory };
+        extractor.extract_data()
+    }
+
     pub fn from(ctx: &mut Context, exe_name: String, data_base_dir: String) -> Option<Self> {
         #[cfg(not(any(target_os = "android", target_os = "horizon")))]
         let mut vanilla_exe_path = env::current_dir().unwrap();
@@ -46,6 +63,15 @@ impl VanillaExtractor {
         let mut vanilla_exe_path = PathBuf::from("sdmc:/switch/doukutsu-rs/");
 
         vanilla_exe_path.push(&exe_name);
+
+        // Android publishes the original executable inside the complete data tree.
+        // Extraction still targets files/data, not files/data/data.
+        #[cfg(target_os = "android")]
+        let installed_root = vanilla_exe_path.parent().unwrap().to_path_buf();
+        #[cfg(target_os = "android")]
+        if installed_root.join(&data_base_dir).join("chinese-install.json").is_file() || !vanilla_exe_path.is_file() {
+            vanilla_exe_path = installed_root.join(&data_base_dir).join(&exe_name);
+        }
 
         log::info!("Looking for vanilla game executable at {:?}", vanilla_exe_path);
 
@@ -62,6 +88,8 @@ impl VanillaExtractor {
 
         let mut root = vanilla_exe_path.clone();
         root.pop();
+        #[cfg(target_os = "android")]
+        let root = installed_root;
 
         log::info!("Found vanilla game executable, attempting to extract resources.");
 
@@ -242,6 +270,13 @@ impl VanillaExtractor {
 
         let byte_slice = &self.exe_buffer[range];
 
+        self.write_stage_table(byte_slice)
+    }
+
+    // stage.sect is also the completion marker checked by from(). Never publish
+    // it before the complete write succeeds: an interrupted extraction retries.
+    fn write_stage_table(&self, byte_slice: &[u8]) -> GameResult {
+
         let mut stage_tbl_path = self.root.clone();
         stage_tbl_path.push(self.data_base_dir.clone());
 
@@ -251,18 +286,46 @@ impl VanillaExtractor {
 
         stage_tbl_path.push("stage.sect");
 
-        let mut stage_tbl_file = match std::fs::File::create(stage_tbl_path) {
+        let pending_path = stage_tbl_path.with_extension("sect.pending");
+        let mut stage_tbl_file = match std::fs::File::create(&pending_path) {
             Ok(file) => file,
             Err(_) => {
                 return Err(ParseError("Failed to create stage table file.".to_string()));
             }
         };
 
-        let result = stage_tbl_file.write_all(byte_slice);
+        let result = stage_tbl_file.write_all(byte_slice).and_then(|_| stage_tbl_file.sync_all());
         if result.is_err() {
             return Err(ParseError("Failed to write to stage table file.".to_string()));
         }
 
+        drop(stage_tbl_file);
+        std::fs::rename(pending_path, stage_tbl_path)
+            .map_err(|_| ParseError("Failed to publish stage table file.".to_string()))?;
+
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod extraction_tests {
+    use super::*;
+
+    #[test]
+    fn incomplete_extraction_does_not_publish_stage_table() {
+        let root = std::env::temp_dir().join(format!("cavestory-extraction-{}-{}", std::process::id(),
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let data = root.join("data");
+        std::fs::create_dir_all(data.join("stage.sect.pending")).unwrap();
+        let extractor = VanillaExtractor { exe_buffer: Vec::new(), data_base_dir: "data".to_owned(), root: root.clone() };
+        let table = vec![0x41; VANILLA_STAGE_TABLE_SIZE as usize];
+        assert!(extractor.write_stage_table(&table).is_err());
+        assert!(!data.join("stage.sect").exists());
+        std::fs::remove_dir(data.join("stage.sect.pending")).unwrap();
+        std::fs::write(data.join("stage.sect.pending"), b"interrupted previous write").unwrap();
+        extractor.write_stage_table(&table).unwrap();
+        assert_eq!(std::fs::read(data.join("stage.sect")).unwrap(), table);
+        assert!(!data.join("stage.sect.pending").exists());
+        std::fs::remove_dir_all(root).unwrap();
     }
 }

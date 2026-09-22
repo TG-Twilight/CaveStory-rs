@@ -1,0 +1,23 @@
+<resources>
+    <string name="shizuku_title">振动输出方式</string>
+    <string name="shizuku_description">切换选项试振；在选项上按确认键或选择“测试振动”可再次测试，弹窗保持打开。移到“确定”保存。蓝牙需启动 Shell 模式的 Shizuku／Sui 并授权；USB 使用系统输出。各玩家的振动开关仍然生效。</string>
+    <string name="shizuku_off">已关闭</string>
+    <string name="shizuku_enable">开启并授权</string>
+    <string name="shizuku_disable">关闭</string>
+    <string name="shizuku_retry">授权／重新连接</string>
+    <string name="shizuku_permission">等待授权。如已选择不再询问，请在 Shizuku 或 Sui 中允许本游戏。</string>
+    <string name="shizuku_shell_required">需要 Shell 授权。请通过 ADB 启动 Shizuku，或在 Sui 中选择 Shell。</string>
+    <string name="shizuku_ready">Shell 服务就绪，振动需要连接受支持的手柄。</string>
+    <string name="shizuku_connecting">正在连接 Shell 服务…</string>
+    <string name="shizuku_device_unsupported">无法将当前输入设备匹配到受支持的蓝牙手柄。</string>
+    <string name="shizuku_failed">当前系统无法提供所需蓝牙输出，手柄操作仍可使用。</string>
+    <string name="shizuku_unavailable">服务不可用。请启动 Shell 模式的 Shizuku 或 Sui 后重新连接。</string>
+    <string name="rumble_output_system">系统输出</string>
+    <string name="rumble_output_bluetooth">蓝牙输出（setReport）</string>
+    <string name="rumble_output_player">振动输出 · 玩家 %1$d</string>
+    <string name="rumble_output_no_device">请连接分配给当前玩家的手柄后测试。</string>
+    <string name="rumble_output_disabled">预览不可用：请开启振动，并为已启用的玩家分配手柄。</string>
+    <string name="rumble_output_sent">请求已发送，请确认手柄是否实际振动。</string>
+    <string name="rumble_output_not_sent">请求未发送。请检查设备与授权，然后选择“测试振动”。</string>
+    <string name="rumble_output_test">测试振动</string>
+</resources>

@@ -141,7 +141,8 @@ impl TextScript {
 
         match instr {
             // Zero operand codes
-            TSCOpCode::AEp
+            TSCOpCode::GHP
+            | TSCOpCode::AEp
             | TSCOpCode::CAT
             | TSCOpCode::CIL
             | TSCOpCode::CLO

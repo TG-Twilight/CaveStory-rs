@@ -48,6 +48,49 @@ pub struct GameProfile {
     pub difficulty: u8,
 }
 
+#[cfg(test)]
+mod save_commit_tests {
+    use super::*;
+    use std::io::{Cursor, Write};
+
+    fn profile() -> GameProfile {
+        GameProfile {
+            current_map: 13, current_song: 0, pos_x: 1234, pos_y: 5678,
+            direction: Direction::Left, max_life: 3, stars: 0, life: 3,
+            current_weapon: 0, current_item: 0, equipment: 0, control_mode: 0, counter: 0,
+            weapon_data: std::array::from_fn(|_| WeaponData { weapon_id: 0, level: 0, exp: 0, max_ammo: 0, ammo: 0 }),
+            items: [0; 32], teleporter_slots: std::array::from_fn(|_| TeleporterSlotData { index: 0, event_num: 0 }),
+            map_flags: [0; 128], flags: [0x5a; 1000], timestamp: 123, difficulty: 0,
+        }
+    }
+
+    struct ShortWriter(Vec<u8>);
+    impl Write for ShortWriter {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            let count = bytes.len().min(3); self.0.extend_from_slice(&bytes[..count]); Ok(count)
+        }
+        fn flush(&mut self) -> io::Result<()> { Ok(()) }
+    }
+    #[test]
+    fn save_handles_short_writes_without_losing_flags() {
+        let mut writer = ShortWriter(Vec::new());
+        profile().write_save(&mut writer).unwrap();
+        let loaded = GameProfile::load_from_save(Cursor::new(writer.0)).unwrap();
+        assert_eq!(loaded.current_map, 13);
+        assert_eq!(loaded.flags, [0x5a; 1000]);
+        assert_eq!(loaded.timestamp, 123);
+    }
+    struct FailedCommit;
+    impl Write for FailedCommit {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> { Ok(bytes.len()) }
+        fn flush(&mut self) -> io::Result<()> { Err(io::Error::new(io::ErrorKind::PermissionDenied, "save folder revoked")) }
+    }
+    #[test]
+    fn save_reports_failed_external_commit() {
+        assert!(profile().write_save(FailedCommit).is_err());
+    }
+}
+
 impl GameProfile {
     pub fn apply(&self, state: &mut SharedGameState, game_scene: &mut GameScene, ctx: &mut Context) {
         state.fade_state = FadeState::Visible;
@@ -301,15 +344,16 @@ impl GameProfile {
         }
 
         let something = [0u8; 0x80];
-        data.write(&something)?;
+        data.write_all(&something)?;
 
         data.write_u32::<BE>(0x464c4147)?;
-        data.write(&self.flags)?;
+        data.write_all(&self.flags)?;
 
         data.write_u32::<LE>(0)?; // unused(?) CS+ space
 
         data.write_u64::<LE>(self.timestamp)?;
         data.write_u8(self.difficulty)?;
+        data.flush()?;
 
         Ok(())
     }

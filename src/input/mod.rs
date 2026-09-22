@@ -6,4 +6,7 @@ pub mod keyboard_player_controller;
 pub mod player_controller;
 pub mod replay_player_controller;
 pub mod touch_controls;
+pub mod touch_visibility;
 pub mod touch_player_controller;
+
+pub mod prompts;

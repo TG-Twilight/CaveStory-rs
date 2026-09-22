@@ -1,10 +1,16 @@
 <resources>
+    <string name="data_error_title">CaveStory-rs — Game resources unavailable</string>
+    <string name="data_error_message">Game resources are missing or incomplete. Reopen the app to prepare resources, or check your imported game folder. Existing resources, saves and settings have been kept. See the project page for help.</string>
+    <string name="project_help">Project help</string>
+    <string name="close_game">Close game</string>
     <string name="app_description">A faithful and open-source remake of Cave Story engine written in Rust.</string>
 
     <string name="missing_data_title">Missing data files</string>
-    <string name="missing_data_desc">No data files found, would you like to download them?</string>
+    <string name="missing_data_desc">No game data found. Download Chinese, English and Japanese resources from the sources linked by cavestory.one? Language can be changed in Options.</string>
+    <string name="bundled_data_desc">Install the included Chinese, English and Japanese game resources? No network connection is required. Language can be changed in Options.</string>
+    <string name="bundled_upgrade_desc">Install the missing English or Japanese resources from this app? No network connection is required. Existing resources, saves and settings will be kept.</string>
 
-    <string name="download_title">Downloading game data</string>
+    <string name="download_title">Preparing game resources</string>
     <string name="download_status_error_http">Bad HTTP response code: %d</string>
     <!-- Downloading {entry_name}… {progress}% ({downloaded_size}/{total_size} KiB, {speed} KiB/s) -->
     <string name="download_status_downloading">Downloading %1$s… %2$d%% (%3$d/%4$d KiB, %5$d KiB/s)</string>
@@ -17,4 +23,41 @@
 
     <string name="dir_not_found">Dir not found</string>
     <string name="no_app_found_to_open_dir">No app found to open dir</string>
+    <string name="download_preparing">Verifying and preparing game resources…</string>
+    <string name="download_chinese_progress">Downloading game resources… %1$d KiB</string>
+    <string name="download_failed">Download or installation failed. Existing data was kept.\n%1$s</string>
+    <string name="download_retry">Retry</string>
+    <string name="english_data_title">Additional game languages</string>
+    <string name="english_data_desc">Download missing English or Japanese story, map names and images? Existing resources, saved games and settings will be kept. You can cancel and keep playing.</string>
+    <string name="storage_title">Save folder</string>
+    <string name="storage_choice_message">Choose where CaveStory-rs stores saved games. Confirm your selection with OK.</string>
+    <string name="storage_private_option">Private app storage\nBest compatibility. Saves and settings remain private. To manage them in a file manager, use Add storage and select CaveStory-rs.</string>
+    <string name="storage_public_option">Public folder\nChoose or create a local folder for saved games only. Settings, game resources and resource images remain in private app storage.</string>
+    <string name="storage_checking">Checking the selected save folder…</string>
+    <string name="storage_configuring">Verifying and preparing the save folder…</string>
+    <string name="storage_confirm_title">Confirm save folder</string>
+    <string name="storage_confirm_message">Use this folder for saved games?\n\n%1$s\n\nOnly save files will be stored here. Settings, game resources and resource images remain private.</string>
+    <string name="storage_permission_missing">The selected folder did not grant both read and write access.</string>
+    <string name="storage_error_title">Save folder unavailable</string>
+    <string name="storage_error_message">CaveStory-rs cannot use the selected save folder. Existing files were kept. Retry or choose another local folder.\n\n%1$s</string>
+    <string name="storage_game_error">Reading or writing the public save folder failed, so this save was not confirmed. Existing saves and any recovery records were retained. Restore access to the folder and make it available, then retry; or close and restart the game.\n\n%1$s</string>
+    <string name="storage_unknown_error">Unknown storage error</string>
+    <string name="storage_retry">Retry</string>
+    <string name="storage_reselect">Choose another folder</string>
+    <string name="storage_back">Back</string>
+    <string name="storage_quit">Quit</string>
+    <string name="migration_private">Private app storage</string>
+    <string name="migration_public">Choose public folder</string>
+    <string name="migration_choice">Current: %1$s\n\nMove saved games, times, replays and progress records to another folder. Files are copied and verified before switching; originals are kept. Settings and game resources stay private.</string>
+    <string name="migration_working">Checking and verifying saves… Please keep the folder available.</string>
+    <string name="migration_preview">Destination: %1$s\n\nCopy and verify these files, then use this folder? Identical files are reused; other existing files are kept.\n\n%2$s\n\nOriginal files will remain in their current folder.</string>
+    <string name="migration_empty">No progress files to copy.</string>
+    <string name="migration_retained">Existing destination files to keep:\n%1$s</string>
+    <string name="migration_copy">Copy and switch</string>
+    <string name="migration_conflict">Destination: %1$s\n\nThese names have different contents. Nothing has been copied or overwritten:\n\n%2$s\n\nGo back to choose another folder, or use the saves already in the destination without copying current saves.</string>
+    <string name="migration_use_target">Use destination saves</string>
+    <string name="migration_target_confirm">Use only the existing saves in %1$s? Current saves will stay in the original folder and will not be merged.\n\nDestination files:\n%2$s</string>
+    <string name="migration_done">Save folder changed to:\n%1$s\n\nOriginal files were kept. The title screen will refresh when you return.</string>
+    <string name="migration_error">The save folder was not changed. Original files and recovery records were kept. Verified copies may already be in the destination; choosing the same folder retries without overwriting conflicts.\n\n%1$s</string>
+    <string name="migration_title_only">Save your progress and return to the title screen before changing the save folder.</string>
 </resources>

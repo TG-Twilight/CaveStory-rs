@@ -1,0 +1,16 @@
+<resources>
+    <string name="distribution_question">你从哪里获得 CaveStory-rs？</string>
+    <string name="distribution_source_project">CaveStory-rs的GitHub仓库/官网</string>
+    <string name="distribution_source_gated">其它免费但有门槛渠道</string>
+    <string name="distribution_source_paid">淘宝/闲鱼等付费获取的网盘资源</string>
+    <string name="distribution_title">CaveStory-rs 免费公开提供</string>
+    <string name="distribution_project_message">你找到了正确的来源。本项目在 GitHub 免费公开提供，无需购买，也无需关注、入群、转发或观看广告来解锁下载。欢迎把项目地址分享给朋友。</string>
+    <string name="distribution_gated_message">本项目可以直接免费下载，无需关注账号、加入群聊、转发内容、观看广告或完成推广任务来解锁。请不要让第三方利用这个免费项目设置门槛、诱导引流。你可以直接前往下方的项目页面获取资源。</string>
+    <string name="distribution_paid_message">本移植项目在 GitHub 免费公开提供，无需付费购买下载链接。如果你花钱购买了本资源，请务必保留商品介绍、聊天和付款记录，向交易平台举报卖家，要求退款，并依法提出赔偿诉求。不要继续向卖家付款。下方是本项目的免费获取入口。</string>
+    <string name="distribution_signature_title">签名不一致，已阻止进入游戏</string>
+    <string name="distribution_signature_message">当前安装包的签名与 CaveStory-rs 正式发布证书不一致，或无法完成签名校验。游戏可能被篡改后二次售卖，存在安全风险，因此拒绝进入游戏。\n\n如果你花钱购买了本资源，请务必保留商品介绍、聊天和付款记录，向交易平台举报卖家，要求退款，并依法提出赔偿诉求。\n\n请从本项目页面免费获取正式版本。已有存档和设置没有被删除。</string>
+    <string name="distribution_project">打开项目页面</string>
+    <string name="distribution_continue">我知道了，继续</string>
+    <string name="distribution_back">重新选择</string>
+    <string name="distribution_no_browser">未找到可用浏览器。项目地址：</string>
+</resources>

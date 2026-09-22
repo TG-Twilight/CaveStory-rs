@@ -25,7 +25,7 @@ use sdl2::video::Window;
 use sdl2::video::WindowContext;
 use sdl2::{controller, keyboard, pixels, EventPump, GameControllerSubsystem, Sdl, VideoSubsystem};
 
-use crate::common::{Color, Rect};
+use crate::common::{Color, Rect, APP_DISPLAY_NAME};
 use crate::framework::backend::{
     Backend, BackendEventLoop, BackendGamepad, BackendRenderer, BackendShader, BackendTexture, SpriteBatchCommand,
     VertexData, WindowParams, get_scaled_size
@@ -51,6 +51,17 @@ pub struct SDL2Backend {
 impl SDL2Backend {
     pub fn new(window_params: WindowParams) -> GameResult<Box<dyn Backend>> {
         sdl2::hint::set("SDL_JOYSTICK_THREAD", "1");
+        // SDL disables HIDAPI by default on Android. Xbox USB controllers need
+        // its output reports for rumble; the ordinary Android joystick driver
+        // only supplies input. Keep Steam BLE and unrelated HID drivers opt-in.
+        #[cfg(target_os = "android")]
+        sdl2::hint::set("SDL_JOYSTICK_HIDAPI_XBOX_360", "1");
+
+        // The game thread must service the explicitly authorized Binder mailbox
+        // while paused. SDL still owns audio/EGL pause and resume; the suspended
+        // branch below never updates or renders the world.
+        #[cfg(target_os = "android")]
+        sdl2::hint::set("SDL_ANDROID_BLOCK_ON_PAUSE", "0");
 
         let context = sdl2::init().map_err(GameError::WindowError)?;
 
@@ -175,7 +186,7 @@ impl SDL2EventLoop {
             gl_attr.set_context_version(2, 1);
         }
 
-        let mut win_builder = video.window("Cave Story (doukutsu-rs)", ctx.window.size_hint.0 as _, ctx.window.size_hint.1 as _);
+        let mut win_builder = video.window(APP_DISPLAY_NAME, ctx.window.size_hint.0 as _, ctx.window.size_hint.1 as _);
         win_builder.position_centered();
         #[cfg(not(target_os = "android"))]
         win_builder.resizable();
@@ -299,7 +310,21 @@ impl BackendEventLoop for SDL2EventLoop {
 
                 match event {
                     Event::Quit { .. } => {
+                        ctx.stop_rumble_for_lifecycle();
                         state.shutdown();
+                    }
+                    Event::AppWillEnterBackground { .. } | Event::AppDidEnterBackground { .. } => {
+                        state.touch_controls.points.clear();
+                        state.touch_controls.clicks.clear();
+                        ctx.stop_rumble_for_lifecycle();
+                        *GAME_SUSPENDED.lock().unwrap() = true;
+                        state.sound_manager.pause();
+                    }
+                    Event::AppDidEnterForeground { .. } => {
+                        state.touch_controls.visibility.resume(std::time::Instant::now());
+                        *GAME_SUSPENDED.lock().unwrap() = false;
+                        state.sound_manager.resume();
+                        game.loops = 0;
                     }
                     Event::Window { win_event, .. } => match win_event {
                         WindowEvent::FocusGained | WindowEvent::Shown => {
@@ -315,6 +340,7 @@ impl BackendEventLoop for SDL2EventLoop {
                         }
                         WindowEvent::FocusLost | WindowEvent::Hidden => {
                             if state.settings.pause_on_focus_loss {
+                                ctx.stop_rumble_for_lifecycle();
                                 let mut mutex = GAME_SUSPENDED.lock().unwrap();
                                 *mutex = true;
 
@@ -368,12 +394,12 @@ impl BackendEventLoop for SDL2EventLoop {
                                     ctx.window.mode = new_mode;
                                 }
                             }
-                            ctx.keyboard_context.set_key(drs_scan, true);
+                            ctx.prompt_key(&state.settings, drs_scan, true);
                         }
                     }
                     Event::KeyUp { scancode: Some(scancode), .. } => {
                         if let Some(drs_scan) = conv_scancode(scancode) {
-                            ctx.keyboard_context.set_key(drs_scan, false);
+                            ctx.prompt_key(&state.settings, drs_scan, false);
                         }
                     }
                     Event::JoyDeviceAdded { which, .. } => {
@@ -385,12 +411,16 @@ impl BackendEventLoop for SDL2EventLoop {
 
                             log::info!("Connected gamepad: {} (ID: {})", controller.name(), id);
 
-                            let axis_sensitivity = state.settings.get_gamepad_axis_sensitivity(which);
-                            ctx.gamepad_context.add_gamepad(SDL2Gamepad::new(controller), axis_sensitivity);
+                            ctx.gamepad_context.add_gamepad(SDL2Gamepad::new(controller), 0.3);
+                            #[cfg(target_os = "android")]
+                            state.touch_controls.visibility.sdl_gamepad_added();
+                            if let Some(slot) = ctx.gamepad_context.index_for_instance(id) {
+                                ctx.gamepad_context.set_axis_sensitivity(slot, state.settings.get_gamepad_axis_sensitivity(slot));
+                            }
 
                             unsafe {
                                 let controller_type =
-                                    get_game_controller_type(sdl2_sys::SDL_GameControllerTypeForIndex(id as _));
+                                    get_game_controller_type(sdl2_sys::SDL_GameControllerTypeForIndex(which as _));
                                 ctx.gamepad_context.set_gamepad_type(id, controller_type);
                             }
                         }
@@ -399,30 +429,40 @@ impl BackendEventLoop for SDL2EventLoop {
                         let game_controller = &self.refs.borrow().game_controller;
                         log::info!("Disconnected gamepad with ID {}", which);
                         ctx.gamepad_context.remove_gamepad(which);
+                        ctx.prompt_history.remove_gamepad(which);
                     }
                     Event::ControllerAxisMotion { which, axis, value, .. } => {
                         if let Some(drs_axis) = conv_gamepad_axis(axis) {
+                            if let Some(slot) = ctx.gamepad_context.index_for_instance(which) {
+                                ctx.gamepad_context.set_axis_sensitivity(slot, state.settings.get_gamepad_axis_sensitivity(slot));
+                            }
                             let new_value = (value as f64) / i16::MAX as f64;
-                            ctx.gamepad_context.set_axis_value(which, drs_axis, new_value);
+                            ctx.prompt_axis(&state.settings, which, drs_axis, new_value);
                             ctx.gamepad_context.update_axes(which);
                         }
                     }
                     Event::ControllerButtonDown { which, button, .. } => {
                         if let Some(drs_button) = conv_gamepad_button(button) {
-                            ctx.gamepad_context.set_button(which, drs_button, true);
+                            ctx.prompt_button(&state.settings, which, drs_button, true);
                         }
                     }
                     Event::ControllerButtonUp { which, button, .. } => {
                         if let Some(drs_button) = conv_gamepad_button(button) {
-                            ctx.gamepad_context.set_button(which, drs_button, false);
+                            ctx.prompt_button(&state.settings, which, drs_button, false);
                         }
                     }
                     Event::FingerDown { finger_id, x, y, .. } | Event::FingerMotion { finger_id, x, y, .. } => {
+                        state.touch_controls.visibility.activity(std::time::Instant::now());
                         let touch_id = finger_id as u64;
-                        let mut controls = &mut state.touch_controls;
                         let scale = state.scale as f64;
                         let loc_x = (x as f64 * ctx.screen_size.0 as f64) / scale;
                         let loc_y = (y as f64 * ctx.screen_size.1 as f64) / scale;
+                        let moved = state.touch_controls.points.iter().find(|p| p.id == touch_id)
+                            .map_or(true, |p| (p.position.0 - loc_x).abs() + (p.position.1 - loc_y).abs() >= 1.0);
+                        let effective = crate::input::prompts::touch_is_effective(state.touch_controls.control_type,
+                            state.canvas_size, crate::framework::graphics::screen_insets_scaled(ctx, state.scale), (loc_x, loc_y));
+                        ctx.prompt_touch(state.settings.touch_controls && moved && effective);
+                        let mut controls = &mut state.touch_controls;
 
                         if let Some(point) = controls.points.iter_mut().find(|p| p.id == touch_id) {
                             point.last_position = point.position;
@@ -444,6 +484,7 @@ impl BackendEventLoop for SDL2EventLoop {
                         }
                     }
                     Event::FingerUp { finger_id, x, y, .. } => {
+                        state.touch_controls.visibility.activity(std::time::Instant::now());
                         let touch_id = finger_id as u64;
                         let mut controls = &mut state.touch_controls;
 
@@ -455,6 +496,7 @@ impl BackendEventLoop for SDL2EventLoop {
             }
 
             if state.shutdown {
+                ctx.stop_rumble_for_lifecycle();
                 log::info!("Shutting down...");
                 break;
             }
@@ -462,7 +504,19 @@ impl BackendEventLoop for SDL2EventLoop {
             {
                 let mutex = GAME_SUSPENDED.lock().unwrap();
                 if *mutex {
-                    std::thread::sleep(Duration::from_millis(10));
+                    #[cfg(trainer_interface)]
+                    if let Some(scene) = game.scene.as_mut() {
+                        use downcast::Downcast;
+                        if let Ok(scene) = Downcast::<crate::scene::game_scene::GameScene>::downcast_mut(scene.as_mut()) {
+                            scene.poll_trainer(state, true);
+                        }
+                    }
+                    ctx.stop_rumble_for_lifecycle();
+                    #[cfg(target_os = "android")]
+                    let pause_ms = if crate::trainer_platform::enabled() { 10 } else { 100 };
+                    #[cfg(not(target_os = "android"))]
+                    let pause_ms = 10;
+                    std::thread::sleep(Duration::from_millis(pause_ms));
                     continue;
                 }
             }
@@ -486,7 +540,30 @@ impl BackendEventLoop for SDL2EventLoop {
                 }
             }
 
-            game.update(ctx).unwrap();
+            #[cfg(target_os = "android")]
+            {
+                // Android also sees keyboards/mice; SDL also sees HID-only controllers.
+                // On inventory failure prefer accessible touch controls.
+                let capabilities = crate::framework::android_input::external_input_capabilities().unwrap_or(0);
+                state.touch_controls.visibility.gamepad_connection((capabilities as u32) >> 2);
+                let gamepad = capabilities & 1 != 0 || crate::framework::gamepad::get_gamepads(ctx).next().is_some();
+                let old_display = state.settings.display_touch_controls;
+                state.touch_controls.visibility.sync_devices(gamepad, capabilities & 2 != 0,
+                    &mut state.settings.display_touch_controls, std::time::Instant::now());
+                if old_display != state.settings.display_touch_controls {
+                    log::info!("Touch controls display={} (gamepad={}, keyboard/mouse={})",
+                        state.settings.display_touch_controls, gamepad, capabilities & 2 != 0);
+                }
+            }
+
+            if let Err(error) = game.update(ctx) {
+                #[cfg(target_os = "android")]
+                if crate::framework::android_storage::failed() {
+                    log::error!("Closing after save storage error: {}", error);
+                    break;
+                }
+                panic!("Game update failed: {}", error);
+            }
 
             #[cfg(target_os = "android")]
             {
@@ -501,6 +578,7 @@ impl BackendEventLoop for SDL2EventLoop {
             }
 
             if let Some(_) = &state.next_scene {
+                ctx.stop_rumble_for_lifecycle();
                 game.scene = mem::take(&mut state.next_scene);
                 game.scene.as_mut().unwrap().init(state, ctx).unwrap();
                 game.loops = 0;
@@ -611,17 +689,40 @@ fn get_game_controller_type(ctype: sdl2_sys::SDL_GameControllerType) -> GamepadT
 
 struct SDL2Gamepad {
     inner: GameController,
+    rumble_error_reported: bool,
 }
 
 impl SDL2Gamepad {
     pub fn new(inner: GameController) -> Box<dyn BackendGamepad> {
-        Box::new(SDL2Gamepad { inner })
+        log::info!("Gamepad rumble support: {} (ID: {}): {}", inner.name(), inner.instance_id(), inner.has_rumble());
+        Box::new(SDL2Gamepad { inner, rumble_error_reported: false })
     }
 }
 
 impl BackendGamepad for SDL2Gamepad {
     fn set_rumble(&mut self, low_freq: u16, high_freq: u16, duration_ms: u32) -> GameResult {
-        let _ = self.inner.set_rumble(low_freq, high_freq, duration_ms);
+        // SDL can accept a cached zero without calling its driver. Always pass
+        // cancellation to the optional fallback too, even when SDL returns Ok.
+        #[cfg(target_os = "android")]
+        if duration_ms == 0 || (low_freq == 0 && high_freq == 0) {
+            crate::framework::android_rumble::rumble(self.inner.instance_id(), 0, 0, 0);
+        }
+        #[cfg(target_os = "android")]
+        if duration_ms > 0 && (low_freq != 0 || high_freq != 0)
+            && crate::framework::android_rumble::prefers_bluetooth(self.inner.instance_id()) {
+            crate::framework::android_rumble::rumble(self.inner.instance_id(), low_freq, high_freq, duration_ms);
+            return Ok(());
+        }
+        if let Err(error) = self.inner.set_rumble(low_freq, high_freq, duration_ms) {
+            #[cfg(target_os = "android")]
+            if crate::framework::android_rumble::rumble(self.inner.instance_id(), low_freq, high_freq, duration_ms) {
+                return Ok(());
+            }
+            if !self.rumble_error_reported {
+                log::warn!("Gamepad rumble unavailable: {} (ID: {}): {}", self.inner.name(), self.inner.instance_id(), error);
+                self.rumble_error_reported = true;
+            }
+        }
         Ok(())
     }
 

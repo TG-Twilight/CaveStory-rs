@@ -174,14 +174,15 @@ impl Inventory {
 
     pub fn refill_all_ammo(&mut self) {
         for weapon in self.weapons.iter_mut() {
+            #[cfg(trainer_interface)]
+            if weapon.trainer_lock_ammo { continue; }
             weapon.ammo = weapon.max_ammo;
         }
     }
 
     pub fn reset_all_weapon_xp(&mut self) {
         for weapon in self.weapons.iter_mut() {
-            weapon.level = WeaponLevel::Level1;
-            weapon.experience = 0;
+            weapon.reset_xp();
         }
     }
 
@@ -195,6 +196,8 @@ impl Inventory {
         let mut result = TakeExperienceResult::None;
 
         if let Some(weapon) = self.get_current_weapon_mut() {
+            #[cfg(trainer_interface)]
+            if weapon.trainer_lock_experience { return result; }
             let lvl_table = state.constants.weapon.level_table[weapon.wtype as usize];
             let mut tmp_exp = weapon.experience as isize - exp as isize;
 
