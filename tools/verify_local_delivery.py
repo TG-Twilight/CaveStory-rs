@@ -126,7 +126,7 @@ def verify(batch):
             android_identity(apk, date)
             with zipfile.ZipFile(apk) as package:
                 names = inspect_zip(package)
-                licenses = Path(__file__).resolve().parents[1] / 'drsandroid/app/src/main/assets/licenses'
+                licenses = Path(__file__).resolve().parents[1] / 'platforms/android/app/src/main/assets/licenses'
                 for license_name in ('Shizuku-API-LICENSE.txt', 'CaveStory-rs-LICENSE.txt', 'SDL2-LICENSE.txt'):
                     entry = 'assets/licenses/' + license_name
                     require(entry in names, 'Missing Android license: ' + license_name)

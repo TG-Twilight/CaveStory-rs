@@ -28,4 +28,4 @@ codegen-units = 256
 incremental = true
 
 [dependencies]
-doukutsu-rs = { path = "../", default-features = false, features = ["default-base", "backend-horizon"] }
+doukutsu-rs = { path = "../../", default-features = false, features = ["default-base", "backend-horizon"] }

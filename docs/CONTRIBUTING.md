@@ -7,8 +7,8 @@ Start with the [build instructions](../README.md#build) and [known limitations](
 | Path | Contents |
 | --- | --- |
 | `src/` | Shared Rust engine and platform integration |
-| `drsandroid/` | Android Gradle project and native wrapper |
-| `drshorizon/` | Inherited Nintendo Switch port; outside this fork's current delivery matrix |
+| `platforms/android/` | Android Gradle project and native wrapper |
+| `platforms/switch/` | Inherited Nintendo Switch port; outside this fork's current delivery matrix |
 | `vendor/` | Vendored dependencies and their notices |
 | `res/` | Application assets, locale schemas, distribution text, and README artwork |
 | `tools/` | Resource conversion, build, packaging, verification, tests, and diagnostic probes |
@@ -16,6 +16,8 @@ Start with the [build instructions](../README.md#build) and [known limitations](
 | `.github/` | Issue templates and disabled legacy CI configuration |
 
 Run commands from the repository root unless a guide says otherwise. The controller diagnostic remains available as `cargo run --example controller_feedback_probe`; its source is in `tools/probes/`. Build outputs and downloaded resources belong outside the source tree, in the sibling `CaveStory-rs-runs` directory used by the build scripts.
+
+The root keeps the project README, license, and Cargo manifest/lockfile. The Cargo build script is `tools/build.rs`, contributor attribution is in [AUTHORS.md](AUTHORS.md), and Rust formatting uses `.rustfmt.toml`. Reusable ARM64 tools live in `../CaveStory-rs-runs/cache/toolchains/`. Keep local notes and temporary investigation files outside the repository.
 
 ## Public content
 

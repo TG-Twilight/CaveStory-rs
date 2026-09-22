@@ -196,14 +196,14 @@ The current project uses JDK 17-compatible tooling, SDK 35, Build Tools `35.0.1`
 rustup target add aarch64-linux-android armv7-linux-androideabi
 ```
 
-**Signing must be configured before building.** Both Debug and Release currently require a JKS; there is no automatic debug-key fallback. Gradle accepts `REVIA_KS_PATH` and `REVIA_KS_PASS`, expects one private-key entry, and uses the same store/key password. The maintainer's private key is not included. For your own build, supply your own key and configure [SignaturePolicy.java](drsandroid/app/src/main/java/io/github/cavestory_rs/SignaturePolicy.java) for your certificate; otherwise the installed app will refuse to start. Clearly identify redistributed builds as your own.
+**Signing must be configured before building.** Both Debug and Release currently require a JKS; there is no automatic debug-key fallback. Gradle accepts `REVIA_KS_PATH` and `REVIA_KS_PASS`, expects one private-key entry, and uses the same store/key password. The maintainer's private key is not included. For your own build, supply your own key and configure [SignaturePolicy.java](platforms/android/app/src/main/java/io/github/cavestory_rs/SignaturePolicy.java) for your certificate; otherwise the installed app will refuse to start. Clearly identify redistributed builds as your own.
 
 Once signing variables and `JAVA_HOME` / `ANDROID_HOME` are set, run from the repository root:
 
 ```powershell
-cd drsandroid
-./gradlew.bat assembleDebug --project-cache-dir ../../CaveStory-rs-runs/cache/gradle-project --console=plain
-cd ..
+cd platforms/android
+./gradlew.bat assembleDebug --project-cache-dir ../../../CaveStory-rs-runs/cache/gradle-project --console=plain
+cd ../..
 ```
 
 This generates two base debug APKs under `../CaveStory-rs-runs/cache/android/app/build/outputs/apk/debug/`, using the `.debug` application suffix. `assembleRelease` builds the release variant. To bundle verified game archives, first prepare them with `py tools/package_windows_with_game.py --android-assets <directory-inside-CaveStory-rs-runs>`, then pass that directory to Gradle as `-PcaveStoryGameAssets=<directory>`. Initial dependency, font, and game-archive preparation requires network access when caches are empty.
@@ -246,9 +246,9 @@ Remaining work includes complete playthrough and ending validation, full script 
 
 Cave Story is the reason this project exists. To **Daisuke Amaya (Pixel / 天谷大輔)** and **[Studio Pixel](https://studiopixel.jp/)**: thank you for creating a world whose characters, music, and small details still make us want to return. This work is a tribute to that game and to the care behind it.
 
-To the **[doukutsu-rs team and contributors](AUTHORS.md)**: thank you for making the engine open, portable, and practical to build upon. The work in this fork depends on yours. We hope these additions help more players enjoy what you have made possible.
+To the **[doukutsu-rs team and contributors](docs/AUTHORS.md)**: thank you for making the engine open, portable, and practical to build upon. The work in this fork depends on yours. We hope these additions help more players enjoy what you have made possible.
 
-Thanks also to Hydrowing and Aeon Genesis for the translations, the Cave Story Tribute Site for preserving resources and information, and [Fusion Pixel](https://github.com/TakWolf/fusion-pixel-font) and its contributors for the pixel fonts. The inherited credits for AppleHair, Daedliy, ggez, Clownacy, LunarLambda/organism, Zoroyoshi, and other contributors remain in [AUTHORS.md](AUTHORS.md).
+Thanks also to Hydrowing and Aeon Genesis for the translations, the Cave Story Tribute Site for preserving resources and information, and [Fusion Pixel](https://github.com/TakWolf/fusion-pixel-font) and its contributors for the pixel fonts. The inherited credits for AppleHair, Daedliy, ggez, Clownacy, LunarLambda/organism, Zoroyoshi, and other contributors remain in [AUTHORS.md](docs/AUTHORS.md).
 
 > The hope is modest: that someone can open the game on a device they already own, read it comfortably, and spend a little more time in Cave Story's world.
 

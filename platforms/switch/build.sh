@@ -123,8 +123,9 @@ function run_docker() {
       echo "Using prebuilt docker image: $RUSTSWITCH_IMAGE"
     fi
 
-    PROJECT_DIR="$(dirname $PWD)"
+    PROJECT_DIR="$(cd ../.. && pwd)"
     docker run -it \
+      -w /workspace/platforms/switch \
       -v "${PROJECT_DIR}":/workspace \
       -v "${CARGO_HOME:-${HOME}/.cargo}/registry:/usr/local/cargo/registry" \
       -v "${CARGO_HOME:-${HOME}/.cargo}/git:/usr/local/cargo/git" \
@@ -198,9 +199,9 @@ fi
 
 # Building the port
 message "Compiling shaders..."
-uam -s vert -o ../src/framework/shaders/deko3d/vertex_basic.dksh ../src/framework/shaders/deko3d/vertex_basic.glsl
-uam -s frag -o ../src/framework/shaders/deko3d/fragment_textured.dksh ../src/framework/shaders/deko3d/fragment_textured.glsl
-uam -s frag -o ../src/framework/shaders/deko3d/fragment_color.dksh ../src/framework/shaders/deko3d/fragment_color.glsl
+uam -s vert -o ../../src/framework/shaders/deko3d/vertex_basic.dksh ../../src/framework/shaders/deko3d/vertex_basic.glsl
+uam -s frag -o ../../src/framework/shaders/deko3d/fragment_textured.dksh ../../src/framework/shaders/deko3d/fragment_textured.glsl
+uam -s frag -o ../../src/framework/shaders/deko3d/fragment_color.dksh ../../src/framework/shaders/deko3d/fragment_color.glsl
 
 message "Building crate..."
 cargo build -Z build-std=core,alloc,std,panic_abort -Z json-target-spec --target aarch64-nintendo-switch.json $CARGO_FLAGS
@@ -213,7 +214,7 @@ nacptool --create 'doukutsu-rs' 'doukutsu-rs contributors' $VERSION target/aarch
 
 message "Running elf2nro..."
 elf2nro target/aarch64-nintendo-switch/$BUILD_MODE/drshorizon.elf target/aarch64-nintendo-switch/$BUILD_MODE/drshorizon.nro \
-  --icon=../res/crabsue-icon.jpg \
+  --icon=../../res/crabsue-icon.jpg \
   --nacp=target/aarch64-nintendo-switch/$BUILD_MODE/drshorizon.nacp
 
 message "done!"

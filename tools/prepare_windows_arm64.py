@@ -14,7 +14,7 @@ if catalog is None:
             break
 if catalog is None:raise SystemExit('Install VS 2019 Build Tools, or specify its --catalog path')
 packages=json.loads(catalog.read_text(encoding='utf-8-sig'))['packages']
-dest=ROOT/'.cache/toolchains/msvc-arm64';dest.mkdir(parents=True,exist_ok=True)
+dest=ROOT.parent/'CaveStory-rs-runs/cache/toolchains/msvc-arm64';dest.mkdir(parents=True,exist_ok=True)
 ids=['Microsoft.VC.14.29.16.11.Tools.HostX64.TargetARM64.base','Microsoft.VC.14.29.16.11.CRT.ARM64.Desktop.base','Microsoft.VC.14.29.16.11.CRT.ARM64.Desktop.debug.base']
 ids.append('Microsoft.VC.14.29.16.11.CRT.ARM64.Store.base')
 records=[]

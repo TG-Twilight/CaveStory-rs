@@ -15,7 +15,7 @@ $env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
 $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
 $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
 $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:JAVA_HOME\bin;$env:PATH"
-Push-Location "$PSScriptRoot/../drsandroid"
+Push-Location "$PSScriptRoot/../platforms/android"
 try {
     & py "$PSScriptRoot/package_windows_with_game.py" --android-assets "$BatchDir/android/bundled-assets"
     if ($LASTEXITCODE -ne 0) { throw 'Bundled game asset preparation failed' }

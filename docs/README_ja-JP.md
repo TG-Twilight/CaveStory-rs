@@ -196,14 +196,14 @@ cargo build --release --locked --bin CaveStory-rs --target x86_64-pc-windows-msv
 rustup target add aarch64-linux-android armv7-linux-androideabi
 ```
 
-**ビルド前に署名を設定する必要があります。** 現在は Debug と Release の両方で JKS が必要で、標準 debug キーへの自動フォールバックはありません。Gradle は `REVIA_KS_PATH` と `REVIA_KS_PASS` を受け取り、秘密鍵エントリーが一つだけのキーストアを前提に、ストアと鍵に同じパスワードを使用します。保守者の秘密鍵はソースに含まれません。独自ビルドでは自分の鍵を用意し、[SignaturePolicy.java](../drsandroid/app/src/main/java/io/github/cavestory_rs/SignaturePolicy.java) も自分の証明書に合わせて設定してください。設定しない場合、インストール後の起動チェックで拒否されます。再配布する際は、独自ビルドであることを明示してください。
+**ビルド前に署名を設定する必要があります。** 現在は Debug と Release の両方で JKS が必要で、標準 debug キーへの自動フォールバックはありません。Gradle は `REVIA_KS_PATH` と `REVIA_KS_PASS` を受け取り、秘密鍵エントリーが一つだけのキーストアを前提に、ストアと鍵に同じパスワードを使用します。保守者の秘密鍵はソースに含まれません。独自ビルドでは自分の鍵を用意し、[SignaturePolicy.java](../platforms/android/app/src/main/java/io/github/cavestory_rs/SignaturePolicy.java) も自分の証明書に合わせて設定してください。設定しない場合、インストール後の起動チェックで拒否されます。再配布する際は、独自ビルドであることを明示してください。
 
 署名用の環境変数と `JAVA_HOME`／`ANDROID_HOME` を設定したら、リポジトリのルートから実行します。
 
 ```powershell
-cd drsandroid
-./gradlew.bat assembleDebug --project-cache-dir ../../CaveStory-rs-runs/cache/gradle-project --console=plain
-cd ..
+cd platforms/android
+./gradlew.bat assembleDebug --project-cache-dir ../../../CaveStory-rs-runs/cache/gradle-project --console=plain
+cd ../..
 ```
 
 二つの基本 debug APK が `../CaveStory-rs-runs/cache/android/app/build/outputs/apk/debug/` に生成され、アプリ ID には `.debug` が付きます。リリース構成には `assembleRelease` を使います。ゲームデータを同梱する場合は、まず `py tools/package_windows_with_game.py --android-assets <CaveStory-rs-runs内のディレクトリ>` で検証済みのアーカイブを準備し、そのディレクトリを `-PcaveStoryGameAssets=<ディレクトリ>` として Gradle に渡してください。キャッシュが空の場合、依存関係、フォント、ゲームアーカイブの初回取得にはネット接続が必要です。
@@ -246,9 +246,9 @@ Windows x64／x86 と Android ARM64 にはローカルでの動作確認記録�
 
 このプロジェクトの出発点は、何より『洞窟物語』です。**天谷大輔氏（Pixel／Daisuke Amaya）**と **[Studio Pixel](https://studiopixel.jp/)** に、心からの敬意と感謝を。登場人物や音楽、細部の一つひとつが、年月を経てもまた帰りたいと思わせてくれます。この取り組みも、そんな作品と、そこに込められた心へのささやかな敬意です。
 
-**[doukutsu-rs のチームと貢献者の皆さん](../AUTHORS.md)**、エンジンを公開し、さまざまな環境へ広げ、さらに改良できる土台を作ってくださり、ありがとうございます。本フォークの作業は皆さんの成果に支えられています。ここでの追加対応が、その成果をより多くのプレイヤーに届ける助けになれば幸いです。
+**[doukutsu-rs のチームと貢献者の皆さん](AUTHORS.md)**、エンジンを公開し、さまざまな環境へ広げ、さらに改良できる土台を作ってくださり、ありがとうございます。本フォークの作業は皆さんの成果に支えられています。ここでの追加対応が、その成果をより多くのプレイヤーに届ける助けになれば幸いです。
 
-翻訳を手がけた Hydrowing と Aeon Genesis、データや資料を保存する Cave Story Tribute Site、ピクセルフォントを提供する [Fusion Pixel](https://github.com/TakWolf/fusion-pixel-font) とその貢献者にも感謝します。上流から引き継いだ AppleHair、Daedliy、ggez、Clownacy、LunarLambda／organism、Zoroyoshi などのクレジットは [AUTHORS.md](../AUTHORS.md) に残しています。
+翻訳を手がけた Hydrowing と Aeon Genesis、データや資料を保存する Cave Story Tribute Site、ピクセルフォントを提供する [Fusion Pixel](https://github.com/TakWolf/fusion-pixel-font) とその貢献者にも感謝します。上流から引き継いだ AppleHair、Daedliy、ggez、Clownacy、LunarLambda／organism、Zoroyoshi などのクレジットは [AUTHORS.md](AUTHORS.md) に残しています。
 
 > 誰かが手元の端末でゲームを開き、無理なく言葉を読み、『洞窟物語』の世界でもう少し過ごせること。それが、この小さな取り組みの願いです。
 

@@ -5,6 +5,7 @@ version = "1.0.0"
 authors = ["doukutsu-rs contributors"]
 edition = "2021"
 rust-version = "1.88"
+build = "tools/build.rs"
 
 [lib]
 crate-type = ["lib"]

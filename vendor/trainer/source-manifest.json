@@ -21,9 +21,9 @@
     "src/trainer_platform.rs": "203db790cd6a6c18616c3ea1c6dc7b56dfe609d824f2f43742fd928fbd19ab4f",
     "src/trainer_tests.rs": "0d05842a10d808b28d7ebcec6009873f2c7b48c2d982dcfae29daf0e86380490",
     "src/trainer_android.rs": "309c3ef937ded3854f03769b6b35c017f50c3afff45adbcdd59fb352dc69f4ab",
-    "drsandroid/app/src/main/java/io/github/cavestory_rs/TrainerAccessActivity.java": "f874742cb0fce2bcfbf130a755daf04cf7a5ea737f65b2ce55a9bbd15d87ca88",
-    "drsandroid/app/src/main/java/io/github/cavestory_rs/TrainerBridge.java": "62c6dd97b9e6361a566d73567deea88e9e566b9fee7dcc3eebcdad5449e6a97c",
-    "drsandroid/app/src/main/java/io/github/cavestory_rs/TrainerService.java": "b8d4806098c394e9f40601238e4e0451df682140e7e45cb019ec7f4c34cd50bf",
+    "platforms/android/app/src/main/java/io/github/cavestory_rs/TrainerAccessActivity.java": "f874742cb0fce2bcfbf130a755daf04cf7a5ea737f65b2ce55a9bbd15d87ca88",
+    "platforms/android/app/src/main/java/io/github/cavestory_rs/TrainerBridge.java": "62c6dd97b9e6361a566d73567deea88e9e566b9fee7dcc3eebcdad5449e6a97c",
+    "platforms/android/app/src/main/java/io/github/cavestory_rs/TrainerService.java": "b8d4806098c394e9f40601238e4e0451df682140e7e45cb019ec7f4c34cd50bf",
     "vendor/trainer/TRANSPORT.md": "90d9a64b73b1feef9308043f552d4300d7a594902741bfff42678893f7e80e52",
     "vendor/trainer/notices/TRAINER-LICENSES.txt": "e3052696d61291d57d310ea30ee0f9cdcd14e5278f7c309a4b7226a42f2a3d33",
     "vendor/trainer/interface-dependencies.json": "4f8923b3e2313e10e5b8987aaeea333a66729e0d6f417f0b00f85efeb5b72fdd"

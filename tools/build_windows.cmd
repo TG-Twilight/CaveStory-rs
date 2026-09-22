@@ -8,7 +8,7 @@ call "%VSROOT%\Common7\Tools\VsDevCmd.bat" -arch=%VSARCH% -host_arch=x64
 if errorlevel 1 exit /b %errorlevel%
 set "PATH=%USERPROFILE%\.cargo\bin;%VSROOT%\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin;%PATH%"
 if "%TARGET%"=="aarch64-pc-windows-msvc" (
-    set "ARMTOOLS=%~dp0..\.cache\toolchains\msvc-arm64\VC\Tools\MSVC\14.29.30133"
+    set "ARMTOOLS=%~dp0..\..\CaveStory-rs-runs\cache\toolchains\msvc-arm64\VC\Tools\MSVC\14.29.30133"
     set "CMAKE_GENERATOR=Ninja"
 )
 if defined ARMTOOLS (

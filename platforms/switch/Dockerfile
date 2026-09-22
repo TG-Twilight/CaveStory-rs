@@ -33,6 +33,6 @@ RUN \
 # For testing local toolchains (comment the previous `RUN` instruction)
 # COPY ${RUST_VERSION}-switch ${RUSTUP_HOME}/toolchains/${RUST_VERSION}-switch
 
-WORKDIR /workspace/drshorizon
+WORKDIR /workspace/platforms/switch
 
 ENTRYPOINT ["bash"]

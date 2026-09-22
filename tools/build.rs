@@ -1,6 +1,6 @@
 use std::env;
 
-#[path = "src/build_version.rs"]
+#[path = "../src/build_version.rs"]
 mod build_version;
 
 #[cfg(target_os = "windows")]
@@ -16,7 +16,7 @@ fn main() {
     // let dest = PathBuf::from(&env::var("OUT_DIR").unwrap());
     let target = env::var("TARGET").unwrap_or_else(|e| panic!("{}", e));
 
-    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=tools/build.rs");
     println!("cargo:rerun-if-changed=src/build_version.rs");
     println!("cargo:rerun-if-env-changed=CAVESTORY_BUILD_VERSION");
     let version = env::var("CAVESTORY_BUILD_VERSION").unwrap_or_else(|_| {

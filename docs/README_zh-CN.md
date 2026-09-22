@@ -196,14 +196,14 @@ cargo build --release --locked --bin CaveStory-rs --target x86_64-pc-windows-msv
 rustup target add aarch64-linux-android armv7-linux-androideabi
 ```
 
-**构建前必须配置签名。** 当前 Debug 和 Release 均要求 JKS，不会自动回退到默认 debug 密钥。Gradle 接受 `REVIA_KS_PATH`、`REVIA_KS_PASS`，要求密钥库中只有一个私钥条目，并使用相同的 Store／Key password。维护者私钥不随源码提供。自行构建时，使用自己的密钥，并将 [SignaturePolicy.java](../drsandroid/app/src/main/java/io/github/cavestory_rs/SignaturePolicy.java) 配置为自己的证书，否则安装后会被启动检查拒绝。再分发时请明确标明是自己的构建。
+**构建前必须配置签名。** 当前 Debug 和 Release 均要求 JKS，不会自动回退到默认 debug 密钥。Gradle 接受 `REVIA_KS_PATH`、`REVIA_KS_PASS`，要求密钥库中只有一个私钥条目，并使用相同的 Store／Key password。维护者私钥不随源码提供。自行构建时，使用自己的密钥，并将 [SignaturePolicy.java](../platforms/android/app/src/main/java/io/github/cavestory_rs/SignaturePolicy.java) 配置为自己的证书，否则安装后会被启动检查拒绝。再分发时请明确标明是自己的构建。
 
 设置好签名环境变量和 `JAVA_HOME`／`ANDROID_HOME` 后，在仓库根目录运行：
 
 ```powershell
-cd drsandroid
-./gradlew.bat assembleDebug --project-cache-dir ../../CaveStory-rs-runs/cache/gradle-project --console=plain
-cd ..
+cd platforms/android
+./gradlew.bat assembleDebug --project-cache-dir ../../../CaveStory-rs-runs/cache/gradle-project --console=plain
+cd ../..
 ```
 
 两个基础 debug APK 输出到 `../CaveStory-rs-runs/cache/android/app/build/outputs/apk/debug/`，应用标识带 `.debug` 后缀。使用 `assembleRelease` 构建正式变体。需要内置游戏资源时，先运行 `py tools/package_windows_with_game.py --android-assets <CaveStory-rs-runs内的目录>` 准备核验过的资源，再向 Gradle 传入 `-PcaveStoryGameAssets=<该目录>`。缓存为空时，首次依赖、字体及游戏资源准备需要联网。
@@ -246,9 +246,9 @@ Windows x64／x86 和 Android ARM64 已有本地运行证据。Android ARM32 已
 
 因为《洞窟物语》，才有了这个项目。向 **天谷大辅（天谷大輔／Daisuke Amaya／Pixel）**与 **[Studio Pixel](https://studiopixel.jp/)** 致敬。感谢你创造了这个世界，让其中的人物、音乐和小小细节，在多年后仍使人愿意再次走进洞窟。这份工作，也是一份献给原作及其创作心意的敬意。
 
-感谢 **[doukutsu-rs 团队和每一位贡献者](../AUTHORS.md)**。你们让引擎保持开放，让这款游戏走上更多平台，也让后来的开发者能够继续改进。本项目的工作建立在你们的成果之上，希望这些补充能让更多玩家享受到你们所带来的可能。
+感谢 **[doukutsu-rs 团队和每一位贡献者](AUTHORS.md)**。你们让引擎保持开放，让这款游戏走上更多平台，也让后来的开发者能够继续改进。本项目的工作建立在你们的成果之上，希望这些补充能让更多玩家享受到你们所带来的可能。
 
-也感谢 Hydrowing、Aeon Genesis 的翻译，Cave Story Tribute Site 对资源和资料的保存，以及 [Fusion Pixel](https://github.com/TakWolf/fusion-pixel-font) 和贡献者提供的像素字体。沿用自上游的 AppleHair、Daedliy、ggez、Clownacy、LunarLambda／organism、Zoroyoshi 等贡献者署名保留在 [AUTHORS.md](../AUTHORS.md)。
+也感谢 Hydrowing、Aeon Genesis 的翻译，Cave Story Tribute Site 对资源和资料的保存，以及 [Fusion Pixel](https://github.com/TakWolf/fusion-pixel-font) 和贡献者提供的像素字体。沿用自上游的 AppleHair、Daedliy、ggez、Clownacy、LunarLambda／organism、Zoroyoshi 等贡献者署名保留在 [AUTHORS.md](AUTHORS.md)。
 
 > 愿这份小小的改进，让某位玩家能在手边的设备上打开游戏，读懂对白，再在《洞窟物语》的世界里多停留一会儿。
 

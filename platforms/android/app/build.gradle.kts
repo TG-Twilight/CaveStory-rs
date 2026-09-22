@@ -32,7 +32,7 @@ tasks.named("preBuild") { dependsOn(prepareSdlJava) }
 // Shared support assets contain fonts and locales. The game package additionally bundles verified archives.
 val chineseAssets = layout.buildDirectory.dir("generated/chineseAssets")
 val prepareChineseAssets by tasks.registering(Exec::class) {
-    val repository = rootProject.projectDir.parentFile
+    val repository = rootProject.projectDir.parentFile.parentFile
     inputs.files(fileTree(File(repository, "res/chinese/locale")))
     inputs.file(File(repository, "res/chinese/legacy-resource-hashes.properties"))
     inputs.files(File(repository, "tools/install_japanese_resources.py"), File(repository, "tools/install_english_resources.py"))
@@ -164,7 +164,7 @@ android {
         getByName("main") {
             java.srcDir(prepareSdlJava.map { it.destinationDir })
             assets.srcDir(chineseAssets)
-            assets.srcDir(File(rootProject.projectDir.parentFile, "vendor/trainer/notices"))
+            assets.srcDir(File(rootProject.projectDir.parentFile.parentFile, "vendor/trainer/notices"))
             if (bundledGameAssets.isPresent) assets.srcDir(file(bundledGameAssets.get()))
         }
     }

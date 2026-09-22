@@ -101,7 +101,7 @@ def package(engine, output, arch, date):
         raise ValueError('Wrong engine architecture')
     shutil.copy2(engine, staging / 'CaveStory-rs.exe')
     shutil.copy2(ROOT / 'LICENSE', staging / 'LICENSE-doukutsu-rs.txt')
-    shutil.copy2(ROOT / 'AUTHORS.md', staging / 'AUTHORS-doukutsu-rs.md')
+    shutil.copy2(ROOT / 'docs/AUTHORS.md', staging / 'AUTHORS-doukutsu-rs.md')
     shutil.copy2(ROOT / 'vendor/trainer/notices/TRAINER-LICENSES.txt', staging / 'TRAINER-LICENSES.txt')
     support_dir = output / 'support'
     support.prepare(english.RUNS / 'downloads' / support.font.URL.rsplit('/', 1)[1], support_dir)

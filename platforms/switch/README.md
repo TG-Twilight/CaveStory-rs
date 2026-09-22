@@ -39,7 +39,7 @@ All flags not listed in the help message are passed to the `cargo build` command
 ```
 
 ## Building in a Docker container
-To build in a Docker container, enter the `drshorizon` folder. Then run:
+To build in a Docker container, enter the `platforms/switch` folder. Then run:
 ```
 ./build.sh --docker
 ```
@@ -77,7 +77,7 @@ The **patch number** may be incremented when some metadata is changed or when ot
 
 ### Building image
 1. Ensure that [Docker Buildx plugin](https://github.com/docker/buildx#installing) is installed.
-2. Enter directory where the Dockerfile is located (currently it's `drshorizon`).
+2. Enter directory where the Dockerfile is located (currently it's `platforms/switch`).
 3. Build the image and link it to the `latest` tag (replace `${VERSION}` with the new version of the image):
    ```
    docker buildx build --provenance=false \

@@ -82,6 +82,7 @@ __pycache__/
 !/docs/README_zh-CN.md
 !/docs/README_ja-JP.md
 !/docs/CONTRIBUTING.md
+!/docs/AUTHORS.md
 !/docs/releases/
 /docs/releases/*
 !/docs/releases/20260922.md
