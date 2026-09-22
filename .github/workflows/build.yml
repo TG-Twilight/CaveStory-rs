@@ -28,7 +28,8 @@ jobs:
       - name: Prepare toolchains
         run: ./tools/setup_ci.ps1
       - name: Restore downloads and compiler cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             ../CaveStory-rs-runs/downloads
@@ -71,6 +72,7 @@ jobs:
           compression-level: 0
           retention-days: 14
       - name: Build four signed Android packages
+        id: android
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           REVIA_KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -95,7 +97,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Full delivery verification failed' }
           $export = Join-Path $batch 'delivery'
           New-Item -ItemType Directory -Path $export | Out-Null
-          $records = @(Get-Content -Raw -Encoding UTF8 "$batch/verified-delivery.json" | ConvertFrom-Json)
+          $records = Get-Content -Raw -Encoding UTF8 "$batch/verified-delivery.json" | ConvertFrom-Json
           $hashes = @()
           foreach ($record in $records) {
             $source = Join-Path $batch $record.path
@@ -114,3 +116,13 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
+      - name: Save completed compiler cache
+        if: always() && steps.android.outcome == 'success' && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            ../CaveStory-rs-runs/downloads
+            ../CaveStory-rs-runs/cache/cargo
+            ~/.cargo/registry
+            ~/.cargo/git/db
+          key: ${{ steps.cache.outputs.cache-primary-key }}
