@@ -32,8 +32,8 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
-            ../CaveStory-rs-runs/downloads
-            ../CaveStory-rs-runs/cache/cargo
+            ${{ env.CAVESTORY_RUNS }}/downloads
+            ${{ env.CAVESTORY_RUNS }}/cache/cargo
             ~/.cargo/registry
             ~/.cargo/git/db
           key: windows-2022-rust-1.98.1-${{ hashFiles('**/Cargo.lock', 'tools/requirements-font.txt', 'tools/setup_ci.ps1') }}-${{ github.sha }}
@@ -121,8 +121,8 @@ jobs:
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
-            ../CaveStory-rs-runs/downloads
-            ../CaveStory-rs-runs/cache/cargo
+            ${{ env.CAVESTORY_RUNS }}/downloads
+            ${{ env.CAVESTORY_RUNS }}/cache/cargo
             ~/.cargo/registry
             ~/.cargo/git/db
           key: ${{ steps.cache.outputs.cache-primary-key }}

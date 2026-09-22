@@ -3,6 +3,7 @@ $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot
 $runs = [IO.Path]::GetFullPath((Join-Path $repo '../CaveStory-rs-runs'))
 if ($env:GITHUB_ACTIONS -ne 'true') { throw 'This setup is only for GitHub-hosted CI' }
+"CAVESTORY_RUNS=$runs" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
 $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
 $vs = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
