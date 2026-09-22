@@ -21,7 +21,18 @@ foreach ($arch in @('x86_64', 'x86_32', 'arm64')) {
     if ($crt.Count -ne 1) { throw "Expected one CRT directory for $arch" }
     $destination = Join-Path $runs "cache/msvc-runtime/$arch"
     New-Item -ItemType Directory -Force -Path $destination | Out-Null
-    Copy-Item -Path "$($crt[0].FullName)/*.dll" -Destination $destination
+    $machine = @{x86_64=0x8664; x86_32=0x14c; arm64=0xaa64}[$arch]
+    foreach ($dll in Get-ChildItem -LiteralPath $crt[0].FullName -Filter '*.dll') {
+        $bytes = [IO.File]::ReadAllBytes($dll.FullName)
+        $pe = [BitConverter]::ToInt32($bytes, 0x3c)
+        if ([BitConverter]::ToUInt32($bytes, $pe) -ne 0x4550) { throw "Invalid runtime PE: $($dll.Name)" }
+        # Microsoft's ARM64 redist also carries compatibility DLLs for other
+        # machines. Ship only native files; the delivery tests check them again.
+        if ([BitConverter]::ToUInt16($bytes, $pe + 4) -eq $machine) {
+            Copy-Item -LiteralPath $dll.FullName -Destination $destination
+        }
+    }
+    if (-not (Test-Path -LiteralPath "$destination/vcruntime140.dll")) { throw "Missing native CRT for $arch" }
 }
 
 "JAVA_HOME=$env:JAVA_HOME_17_X64" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
