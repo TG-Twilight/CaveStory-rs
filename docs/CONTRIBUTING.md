@@ -13,11 +13,19 @@ Start with the [build instructions](../README.md#build) and [known limitations](
 | `res/` | Application assets, locale schemas, distribution text, and README artwork |
 | `tools/` | Resource conversion, build, packaging, verification, tests, and diagnostic probes |
 | `docs/` | Public project guides, contributor documentation, and release notes |
-| `.github/` | Issue templates and disabled legacy CI configuration |
+| `.github/` | Build workflow, issue templates, and disabled legacy CI configuration |
 
 Run commands from the repository root unless a guide says otherwise. The controller diagnostic remains available as `cargo run --example controller_feedback_probe`; its source is in `tools/probes/`. Build outputs and downloaded resources belong outside the source tree, in the sibling `CaveStory-rs-runs` directory used by the build scripts.
 
 The root keeps the project README, license, and Cargo manifest/lockfile. The Cargo build script is `tools/build.rs`, contributor attribution is in [AUTHORS.md](AUTHORS.md), and Rust formatting uses `.rustfmt.toml`. Reusable ARM64 tools live in `../CaveStory-rs-runs/cache/toolchains/`. Keep local notes and temporary investigation files outside the repository.
+
+## GitHub Actions builds
+
+[Build release packages](../.github/workflows/build.yml) runs on pushes to `main` that change build inputs, or through **Actions → Build release packages → Run workflow**. A hosted Windows runner builds three Windows architectures and two Android ABIs, each with base and bundled-game packages. The batch uses one date in the Asia/Taipei time zone. [setup_ci.ps1](../tools/setup_ci.ps1) prepares the hosted toolchains; local deliveries still use [build_all.ps1](../tools/build_all.ps1).
+
+Configure repository Actions secrets `ANDROID_KEYSTORE_BASE64` (the base64-encoded JKS) and `ANDROID_KEYSTORE_PASSWORD` (its store/key password). The keystore must have one private-key entry and match the certificate required by the app and delivery verifier. Do not put signing materials in source files, command logs, caches, or artifacts. Independent forks must supply their own identity and update their signing policy and verifier together.
+
+The Windows artifact contains six ZIPs. The complete `CaveStory-rs_delivery_<date>` artifact appears only after all ten packages pass the existing signature, architecture, version, resource, and package-content checks; it contains ten packages, `SHA256SUMS`, and `verified-delivery.json`. Artifacts are retained for 14 days. Building and uploading these artifacts does not create or overwrite a GitHub Release, and package checks do not replace hardware testing. The historical upstream workflow remains disabled.
 
 ## Public content
 

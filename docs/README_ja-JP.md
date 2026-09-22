@@ -118,7 +118,7 @@ CaveStory-rs は、Rust で『洞窟物語』のエンジンを再実装した [
 
 ファイル名は `CaveStory-rs_<platform>_<YYYYMMDD>_<architecture>[_game].zip` または `.apk` です。Android は ABI ごとに別の APK を作成するため、端末の OS が対応するものを選んでください。設定上の最低バージョンは Android 7.0／API 24 ですが、条件を満たすすべての端末で動作確認を行ったわけではありません。
 
-本フォークは [GitHub Releases](https://github.com/TG-Twilight/CaveStory-rs/releases/latest) からダウンロードできます。現在の配布物はローカルでビルド・検証しています。上流の旧ワークフローは無効化しており、本フォーク用のクラウドビルドと自動公開は引き続き調整・検証が必要です。
+本フォークは [GitHub Releases](https://github.com/TG-Twilight/CaveStory-rs/releases/latest) からダウンロードできます。現在の Release はローカルでビルド・検証したパッケージです。[GitHub Actions](https://github.com/TG-Twilight/CaveStory-rs/actions/workflows/build.yml) は五つのアーキテクチャ、計十パッケージをビルドし、パッケージ検証後に配布用 artifact をアップロードします。Release の自動公開は行いません。設定と取得方法は[ワークフローガイド](CONTRIBUTING.md#github-actions-builds)を参照してください。
 
 ### Windows
 
@@ -221,7 +221,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_all.ps1
 
 `../CaveStory-rs-runs/builds/<batch>/` に Android の二つの ARM APK と Windows の三アーキテクチャの ZIP を生成します。それぞれに基本版とゲームデータ同梱版があり、同じバッチでは日付バージョンを統一します。`build-info.json`、`SHA256SUMS`、`verified-delivery.json` も出力します。
 
-この手順は現在、保守者の Windows 環境向けです。別のマシンでは、[build_windows.cmd](../tools/build_windows.cmd)、[cargo_windows_arm64.ps1](../tools/cargo_windows_arm64.ps1)、[windows-arm64.cmake](../tools/windows-arm64.cmake) の Visual Studio 2019／MSVC・ARM64 ツールのパスと、[build_android.ps1](../tools/build_android.ps1) の JBR／SDK パスを調整してください。Android スクリプトは Windows の**ユーザー環境変数** `REVIA_KS_PASS` からパスワードを読みます。APK 検証スクリプトも保守者の証明書指紋を前提とするため、独自ビルドではアプリ側の署名方針と合わせて変更する必要があります。
+この手順は Windows 環境向けです。別のマシンでは `VSROOT`／`CAVESTORY_ARMTOOLS` で MSVC と ARM64 コンパイラ、`JAVA_HOME`／`ANDROID_HOME` で Android ツールを指定できます。クラウド環境の設定は [setup_ci.ps1](../tools/setup_ci.ps1) を参照してください。元のローカル既定値は維持しています。Android はプロセスの `REVIA_KS_PASS` を優先し、未設定なら Windows の**ユーザー環境変数**を読みます。JKS の場所は `REVIA_KS_PATH` で指定できます。独自配布では、アプリの署名方針と APK 検証スクリプトの証明書指紋を合わせて変更する必要があります。
 
 固定バージョンのフォント・ゲームアーカイブと、Windows の三アーキテクチャに対応する Visual C++ ランタイムも準備してください。[package_windows_with_game.py](../tools/package_windows_with_game.py) と [build_windows.ps1](../tools/build_windows.ps1) に詳細があります。全体の手順では Android の段階でゲームアーカイブとフォントキャッシュを準備してから Windows のパッケージを作成します。コンパイルの成功に加えて、内容の検証と実機テストが必要です。
 

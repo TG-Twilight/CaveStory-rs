@@ -118,7 +118,7 @@ The current local delivery matrix is:
 
 Files use `CaveStory-rs_<platform>_<YYYYMMDD>_<architecture>[_game].zip` or `.apk`. Android packages are separate ABI builds; choose one supported by your device's OS. The configured Android minimum is Android 7.0 / API 24, which is not a claim that every compatible device has been tested.
 
-Download this fork from [GitHub Releases](https://github.com/TG-Twilight/CaveStory-rs/releases/latest). Releases currently use locally built and verified packages. The historical upstream workflow is disabled; the fork's cloud build and automatic publishing pipeline still needs adaptation and validation.
+Download this fork from [GitHub Releases](https://github.com/TG-Twilight/CaveStory-rs/releases/latest). The current Release uses locally built and verified packages. [GitHub Actions](https://github.com/TG-Twilight/CaveStory-rs/actions/workflows/build.yml) builds the five-architecture, ten-package matrix and uploads a complete delivery artifact after package verification. These builds do not automatically publish a Release; see the [workflow guide](docs/CONTRIBUTING.md#github-actions-builds).
 
 ### Windows
 
@@ -221,7 +221,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_all.ps1
 
 It creates Android's two ARM APKs and Windows' three architecture ZIPs, each with base and game-data variants, under `../CaveStory-rs-runs/builds/<batch>/`. All ten share a date version. The batch includes `build-info.json`, `SHA256SUMS`, and `verified-delivery.json`.
 
-This is currently a Windows maintainer workflow. Before using it on another machine, adapt the Visual Studio 2019/MSVC and ARM64 tool paths in [build_windows.cmd](tools/build_windows.cmd), [cargo_windows_arm64.ps1](tools/cargo_windows_arm64.ps1), and [windows-arm64.cmake](tools/windows-arm64.cmake), and the JBR/SDK paths in [build_android.ps1](tools/build_android.ps1). That script reads the password from the Windows **user-level** `REVIA_KS_PASS` environment variable. The APK verification scripts also expect the maintainer's certificate fingerprint, so independent builds must update that expectation together with the app's signing policy.
+This is a Windows maintainer workflow. On another machine, supply `VSROOT` and `CAVESTORY_ARMTOOLS` for the MSVC installation and ARM64 compiler, and `JAVA_HOME` / `ANDROID_HOME` for Android tooling. [setup_ci.ps1](tools/setup_ci.ps1) shows the hosted-runner setup; the build scripts retain their original local defaults. Android reads `REVIA_KS_PASS` from the process environment, falling back to the Windows **user-level** variable, and accepts `REVIA_KS_PATH` for the JKS location. The APK verification scripts expect the maintainer's certificate fingerprint, so independent builds must update that expectation together with the app's signing policy.
 
 Prepare the pinned font/game archives and the correct Visual C++ runtime files for all three Windows architectures; see [package_windows_with_game.py](tools/package_windows_with_game.py) and [build_windows.ps1](tools/build_windows.ps1). The complete workflow prepares game archives and font caches during its Android stage before Windows packaging. A successful compilation alone does not replace package verification or a device test.
 

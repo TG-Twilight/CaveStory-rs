@@ -118,7 +118,7 @@ doukutsu-rs 为这个愿望提供了很好的基础。本项目最初着手补�
 
 文件名为 `CaveStory-rs_<平台>_<YYYYMMDD>_<架构>[_game].zip` 或 `.apk`。Android 为两个独立 ABI 包，请按设备系统实际支持的架构选择。当前配置的最低 Android 版本为 Android 7.0／API 24，不代表所有符合版本要求的设备都已实测。
 
-本项目从 [GitHub Releases](https://github.com/TG-Twilight/CaveStory-rs/releases/latest) 下载。当前发行包在本地构建并核验；旧上游工作流已停用，本 fork 的云端编译和自动发布流程仍待适配验证。
+本项目从 [GitHub Releases](https://github.com/TG-Twilight/CaveStory-rs/releases/latest) 下载。当前 Release 使用本地构建并核验的包。[GitHub Actions](https://github.com/TG-Twilight/CaveStory-rs/actions/workflows/build.yml) 按五架构十包矩阵构建，通过包校验后上传完整交付 artifact。这些构建不会自动发布 Release；配置及下载方法见[工作流说明](CONTRIBUTING.md#github-actions-builds)。
 
 ### Windows
 
@@ -221,7 +221,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_all.ps1
 
 脚本在 `../CaveStory-rs-runs/builds/<批次>/` 中生成 Android 两种 ARM APK 和 Windows 三种架构 ZIP，每种都有基础版与带游戏版，同批使用统一日期版本。批次附带 `build-info.json`、`SHA256SUMS` 和 `verified-delivery.json`。
 
-这套流程目前面向维护者的 Windows 环境。在其他机器上使用前，需要调整 [build_windows.cmd](../tools/build_windows.cmd)、[cargo_windows_arm64.ps1](../tools/cargo_windows_arm64.ps1)、[windows-arm64.cmake](../tools/windows-arm64.cmake) 中的 Visual Studio 2019／MSVC 和 ARM64 工具路径，以及 [build_android.ps1](../tools/build_android.ps1) 中的 JBR／SDK 路径。Android 脚本从 Windows **用户级**环境变量 `REVIA_KS_PASS` 读取密码；APK 校验脚本还固定检查维护者证书指纹，自行发行需要与应用签名策略一起调整。
+这套流程面向 Windows 环境。其他机器可通过 `VSROOT`／`CAVESTORY_ARMTOOLS` 指定 MSVC 安装和 ARM64 编译器，通过 `JAVA_HOME`／`ANDROID_HOME` 指定 Android 工具；云端配置见 [setup_ci.ps1](../tools/setup_ci.ps1)，构建脚本仍保留原本的本地默认值。Android 优先读取进程环境变量 `REVIA_KS_PASS`，缺失时再读取 Windows **用户级**变量，并通过 `REVIA_KS_PATH` 接收 JKS 路径。APK 校验仍检查维护者证书指纹，自行发行需要与应用签名策略一起调整。
 
 同时需准备固定版本的字体／游戏压缩包，以及三种 Windows 架构对应的 Visual C++ 运行库，具体见 [package_windows_with_game.py](../tools/package_windows_with_game.py) 和 [build_windows.ps1](../tools/build_windows.ps1)。完整流程先在 Android 阶段准备游戏压缩包和字体缓存，再进行 Windows 打包。编译成功之后仍需检查包内容及实际运行情况。
 
